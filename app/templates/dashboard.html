@@ -1,40 +1,531 @@
 {% extends "base.html" %}
 
-{% block title %}Panel - {{ app_name }}{% endblock %}
-
 {% block content %}
-<div class="dashboard-container">
-    <header class="dashboard-header">
-        <h1>{{ app_name }}</h1>
-        <div class="header-actions">
-            <button id="theme-toggle" class="btn btn-icon" aria-label="Cambiar tema"></button>
-            <form method="post" action="/logout" style="display: inline;">
-                <button type="submit" class="btn btn-secondary">Cerrar sesión</button>
+<div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Menú principal">
+        <div class="sidebar-header">
+            <h2>{{ app_name }}</h2>
+            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Alternar menú" aria-expanded="true">
+                <span class="toggle-icon">&#9776;</span>
+            </button>
+        </div>
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="#dashboard" class="nav-link active" data-section="dashboard">
+                        <span class="nav-icon">&#128279;</span>
+                        <span class="nav-text">Panel</span>
+                    </a>
+                </li>
+                {% if user.is_admin %}
+                <li class="nav-divider"></li>
+                <li class="nav-section">Administración</li>
+                <li class="nav-item">
+                    <a href="#users" class="nav-link" data-section="users">
+                        <span class="nav-icon">&#128100;</span>
+                        <span class="nav-text">Usuarios</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        <div class="sidebar-footer">
+            <form method="post" action="/logout" style="width: 100%;">
+                <button type="submit" class="btn btn-secondary btn-block">Cerrar sesión</button>
             </form>
         </div>
-    </header>
+    </aside>
 
-    <main class="dashboard-content">
-        <div class="card">
-            <h2>Bienvenido, {{ user.email }}</h2>
-            <dl class="user-info">
-                <dt>ID</dt>
-                <dd>{{ user.id }}</dd>
-                <dt>Estado</dt>
-                <dd><span class="badge badge-success">Activo</span></dd>
-                <dt>Registrado</dt>
-                <dd>{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}</dd>
-            </dl>
-        </div>
+    <div class="main-wrapper">
+        <header class="top-header">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Abrir menú" aria-expanded="false">
+                <span class="toggle-icon">&#9776;</span>
+            </button>
+            <h1>{{ app_name }}</h1>
+            <div class="header-actions">
+                <span class="user-badge {% if user.is_admin %}badge-admin{% else %}badge-user{% endif %}">
+                    {% if user.is_admin %}Admin{% else %}Usuario{% endif %}
+                </span>
+                <button id="theme-toggle" class="btn btn-icon" aria-label="Cambiar tema"></button>
+            </div>
+        </header>
 
-        <div class="card">
-            <h3>Próximos pasos</h3>
-            <ul class="steps">
-                <li>Agregar más modelos en <code>app/models/</code></li>
-                <li>Crear rutas en <code>app/auth/router.py</code> o nuevos routers</li>
-                <li>Ejecutar migraciones: <code>alembic revision --autogenerate -m "mensaje"</code></li>
-            </ul>
-        </div>
-    </main>
+        <main class="main-content" id="main-content">
+            <section id="section-dashboard" class="content-section active">
+                <div class="card">
+                    <h2>Bienvenido, {{ user.email }}</h2>
+                    <dl class="user-info">
+                        <dt>ID</dt>
+                        <dd>{{ user.id }}</dd>
+                        <dt>Tipo</dt>
+                        <dd><span class="badge {% if user.is_admin %}badge-admin{% else %}badge-user{% endif %}">
+                            {% if user.is_admin %}Administrador{% else %}Usuario estándar{% endif %}
+                        </span></dd>
+                        <dt>Estado</dt>
+                        <dd><span class="badge badge-success">Activo</span></dd>
+                        <dt>Registrado</dt>
+                        <dd>{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}</dd>
+                    </dl>
+                </div>
+
+                <div class="card">
+                    <h3>Acciones rápidas</h3>
+                    <div class="quick-actions">
+                        <a href="#users" class="quick-action {% if not user.is_admin %}disabled{% endif %}" 
+                           data-section="users" {% if not user.is_admin %}aria-disabled="true"{% endif %}>
+                            <span class="qa-icon">&#128100;</span>
+                            <span class="qa-text">Gestionar usuarios</span>
+                            {% if not user.is_admin %}<span class="qa-lock">&#128274;</span>{% endif %}
+                        </a>
+                        <a href="#" class="quick-action disabled" aria-disabled="true">
+                            <span class="qa-icon">&#128196;</span>
+                            <span class="qa-text">Configuración</span>
+                            <span class="qa-lock">&#128274;</span>
+                        </a>
+                        <a href="#" class="quick-action disabled" aria-disabled="true">
+                            <span class="qa-icon">&#128221;</span>
+                            <span class="qa-text">Reportes</span>
+                            <span class="qa-lock">&#128274;</span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            {% if user.is_admin %}
+            <section id="section-users" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Gestión de Usuarios</h2>
+                        <button type="button" class="btn btn-primary" id="btn-create-admin" data-bs-toggle="modal" data-bs-target="#createAdminModal">
+                            <span class="btn-icon">+</span> Crear Admin
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="users-table" id="users-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Email</th>
+                                    <th>Tipo</th>
+                                    <th>Estado</th>
+                                    <th>Registrado</th>
+                                    <th>Contraseña</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in all_users %}
+                                <tr data-user-id="{{ u.id }}">
+                                    <td>{{ u.id }}</td>
+                                    <td>{{ u.email }}</td>
+                                    <td>
+                                        <span class="badge {% if u.is_admin %}badge-admin{% else %}badge-user{% endif %}">
+                                            {% if u.is_admin %}Admin{% else %}Usuario{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if u.is_active %}badge-success{% else %}badge-danger{% endif %}">
+                                            {% if u.is_active %}Activo{% else %}Inactivo{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ u.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>
+                                        <div class="password-cell">
+                                            <span class="password-hidden" data-password="{{ u.hashed_password }}">********</span>
+                                            <button type="button" class="btn btn-icon btn-sm toggle-password" 
+                                                    aria-label="Mostrar/ocultar hash" title="Mostrar hash">
+                                                <span class="eye-icon">&#128065;</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            {% if u.id != user.id %}
+                                            <button type="button" class="btn btn-icon btn-sm toggle-admin" 
+                                                    data-user-id="{{ u.id }}" 
+                                                    data-is-admin="{{ u.is_admin }}"
+                                                    aria-label="{% if u.is_admin %}Quitar admin{% else %}Hacer admin{% endif %}">
+                                                <span class="admin-icon">{% if u.is_admin %}&#128274;{% else %}&#128275;{% endif %}</span>
+                                            </button>
+                                            <button type="button" class="btn btn-icon btn-sm toggle-active" 
+                                                    data-user-id="{{ u.id }}" 
+                                                    data-is-active="{{ u.is_active }}"
+                                                    aria-label="{% if u.is_active %}Desactivar{% else %}Activar{% endif %}">
+                                                <span class="active-icon">{% if u.is_active %}&#128274;{% else %}&#128275;{% endif %}</span>
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted">(Tú)</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+        </main>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
 </div>
+
+<!-- Modal Crear Admin -->
+<div class="modal-overlay" id="createAdminModal" role="dialog" aria-labelledby="modal-title" aria-hidden="true">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modal-title">Crear nuevo administrador</h3>
+            <button type="button" class="modal-close" id="closeModal" aria-label="Cerrar">&times;</button>
+        </div>
+        <form id="createAdminForm" class="modal-body">
+            <div class="form-group">
+                <label for="adminEmail">Email</label>
+                <input type="email" id="adminEmail" name="email" required autocomplete="email" autofocus>
+            </div>
+            <div class="form-group">
+                <label for="adminPassword">Contraseña</label>
+                <input type="password" id="adminPassword" name="password" required minlength="8" autocomplete="new-password">
+                <small class="form-hint">Mínimo 8 caracteres</small>
+            </div>
+            <div class="form-group">
+                <label for="adminConfirmPassword">Confirmar contraseña</label>
+                <input type="password" id="adminConfirmPassword" name="confirm_password" required autocomplete="new-password">
+            </div>
+            <div id="modalError" class="alert alert-error" style="display: none;"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelModal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Crear administrador</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ===== SIDEBAR TOGGLE =====
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const mainWrapper = document.querySelector('.main-wrapper');
+
+    function toggleSidebar(collapsed) {
+        if (collapsed === undefined) {
+            collapsed = sidebar.classList.contains('collapsed');
+        }
+        if (collapsed) {
+            sidebar.classList.remove('collapsed');
+            sidebarToggle.setAttribute('aria-expanded', 'true');
+        } else {
+            sidebar.classList.add('collapsed');
+            sidebarToggle.setAttribute('aria-expanded', 'false');
+        }
+        localStorage.setItem('sidebarCollapsed', collapsed ? 'false' : 'true');
+    }
+
+    function toggleMobileMenu(open) {
+        if (open === undefined) {
+            open = sidebar.classList.contains('mobile-open');
+        }
+        if (open) {
+            sidebar.classList.add('mobile-open');
+            sidebarOverlay.classList.add('visible');
+            mobileMenuToggle.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        } else {
+            sidebar.classList.remove('mobile-open');
+            sidebarOverlay.classList.remove('visible');
+            mobileMenuToggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        }
+    }
+
+    // Desktop toggle
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', function() {
+            toggleSidebar();
+        });
+    }
+
+    // Mobile toggle
+    if (mobileMenuToggle) {
+        mobileMenuToggle.addEventListener('click', function() {
+            toggleMobileMenu();
+        });
+    }
+
+    // Overlay click closes mobile menu
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', function() {
+            toggleMobileMenu(false);
+        });
+    }
+
+    // Restore sidebar state
+    const savedCollapsed = localStorage.getItem('sidebarCollapsed');
+    if (savedCollapsed === 'true') {
+        toggleSidebar(true);
+    }
+
+    // Responsive: auto-collapse on mobile, expand on desktop
+    function handleResize() {
+        if (window.innerWidth < 768) {
+            sidebar.classList.remove('collapsed');
+        } else {
+            sidebar.classList.remove('mobile-open');
+            sidebarOverlay.classList.remove('visible');
+            document.body.style.overflow = '';
+        }
+    }
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    // ===== SECTION NAVIGATION =====
+    const navLinks = document.querySelectorAll('.nav-link[data-section]');
+    const contentSections = document.querySelectorAll('.content-section');
+    const quickActions = document.querySelectorAll('.quick-action[data-section]');
+
+    function showSection(sectionId) {
+        // Update nav links
+        navLinks.forEach(link => {
+            link.classList.toggle('active', link.dataset.section === sectionId.replace('section-', ''));
+        });
+
+        // Show/hide sections
+        contentSections.forEach(section => {
+            section.classList.toggle('active', section.id === sectionId);
+        });
+
+        // Update URL hash
+        history.replaceState(null, '', '#' + sectionId);
+
+        // Close mobile menu on navigation
+        if (window.innerWidth < 768) {
+            toggleMobileMenu(false);
+        }
+    }
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('section-' + this.dataset.section);
+        });
+    });
+
+    quickActions.forEach(action => {
+        if (!action.classList.contains('disabled')) {
+            action.addEventListener('click', function(e) {
+                e.preventDefault();
+                showSection('section-' + this.dataset.section);
+            });
+        }
+    });
+
+    // Handle hash on load
+    const hash = window.location.hash.slice(1);
+    if (hash && document.getElementById('section-' + hash)) {
+        showSection('section-' + hash);
+    }
+
+    // ===== THEME TOGGLE =====
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    const updateThemeIcon = (theme) => {
+        themeToggle.textContent = theme === 'dark' ? '☀' : '☾';
+        themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+    };
+
+    const currentTheme = html.getAttribute('data-theme') || 'light';
+    updateThemeIcon(currentTheme);
+
+    themeToggle.addEventListener('click', function() {
+        const current = html.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateThemeIcon(next);
+    });
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+        if (localStorage.getItem('theme') === 'system') {
+            const next = e.matches ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            updateThemeIcon(next);
+        }
+    });
+
+    // ===== ADMIN: PASSWORD TOGGLE =====
+    document.querySelectorAll('.toggle-password').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const cell = this.closest('.password-cell');
+            const hiddenSpan = cell.querySelector('.password-hidden');
+            const isHidden = hiddenSpan.textContent === '********';
+            
+            if (isHidden) {
+                hiddenSpan.textContent = hiddenSpan.dataset.password;
+                this.querySelector('.eye-icon').textContent = '&#128064;';
+                this.setAttribute('aria-label', 'Ocultar hash');
+            } else {
+                hiddenSpan.textContent = '********';
+                this.querySelector('.eye-icon').textContent = '&#128065;';
+                this.setAttribute('aria-label', 'Mostrar hash');
+            }
+        });
+    });
+
+    // ===== ADMIN: TOGGLE ADMIN STATUS =====
+    document.querySelectorAll('.toggle-admin').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            const isAdmin = this.dataset.isAdmin === 'true';
+            const newAdmin = !isAdmin;
+            
+            if (confirm('¿' + (newAdmin ? 'Otorgar' : 'Revocar') + ' permisos de administrador?')) {
+                fetch('/admin/users/' + userId + '/toggle-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_admin: newAdmin })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.detail || 'No se pudo actualizar'));
+                    }
+                })
+                .catch(() => alert('Error de conexión'));
+            }
+        });
+    });
+
+    // ===== ADMIN: TOGGLE ACTIVE STATUS =====
+    document.querySelectorAll('.toggle-active').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            const isActive = this.dataset.isActive === 'true';
+            const newActive = !isActive;
+            
+            if (confirm('¿' + (newActive ? 'Activar' : 'Desactivar') + ' este usuario?')) {
+                fetch('/admin/users/' + userId + '/toggle-active', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: newActive })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.detail || 'No se pudo actualizar'));
+                    }
+                })
+                .catch(() => alert('Error de conexión'));
+            }
+        });
+    });
+
+    // ===== MODAL CREAR ADMIN =====
+    const modal = document.getElementById('createAdminModal');
+    const openModalBtn = document.getElementById('btn-create-admin');
+    const closeModalBtn = document.getElementById('closeModal');
+    const cancelModalBtn = document.getElementById('cancelModal');
+    const form = document.getElementById('createAdminForm');
+    const errorDiv = document.getElementById('modalError');
+
+    function openModal() {
+        modal.classList.add('visible');
+        modal.setAttribute('aria-hidden', 'false');
+        document.getElementById('adminEmail').focus();
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        modal.classList.remove('visible');
+        modal.setAttribute('aria-hidden', 'true');
+        form.reset();
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+        document.body.style.overflow = '';
+    }
+
+    if (openModalBtn) openModalBtn.addEventListener('click', openModal);
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+    if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.classList.contains('visible')) {
+            closeModal();
+        }
+    });
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+
+        const formData = new FormData(form);
+        const email = formData.get('email').toLowerCase().trim();
+        const password = formData.get('password');
+        const confirmPassword = formData.get('confirm_password');
+
+        if (password !== confirmPassword) {
+            errorDiv.textContent = 'Las contraseñas no coinciden';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        if (password.length < 8) {
+            errorDiv.textContent = 'La contraseña debe tener al menos 8 caracteres';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creando...';
+
+        try {
+            const res = await fetch('/admin/users/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, is_admin: true })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                closeModal();
+                location.reload();
+            } else {
+                errorDiv.textContent = data.detail || 'Error al crear administrador';
+                errorDiv.style.display = 'block';
+            }
+        } catch (err) {
+            errorDiv.textContent = 'Error de conexión';
+            errorDiv.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Crear administrador';
+        }
+    });
+
+    // ===== KEYBOARD NAVIGATION =====
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + B to toggle sidebar
+        if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+            e.preventDefault();
+            toggleSidebar();
+        }
+    });
+});
+</script>
 {% endblock %}
