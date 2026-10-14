@@ -57,6 +57,7 @@ Desktop.ini
 *.log
 logs/
 server.log
+cookies.txt
 
 # Runtime
 *.pid

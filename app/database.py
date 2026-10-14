@@ -1,8 +1,25 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 from app.config import settings
 
-engine = create_async_engine(settings.database_url, echo=settings.debug, future=True)
+# Configurar pool según entorno
+if settings.debug:
+    engine = create_async_engine(
+        settings.database_url,
+        echo=settings.debug,
+        future=True,
+        pool_pre_ping=True,
+    )
+else:
+    # Producción: sin pool persistente para serverless/contenedores
+    engine = create_async_engine(
+        settings.database_url,
+        echo=False,
+        future=True,
+        poolclass=NullPool,
+        pool_pre_ping=True,
+    )
 
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
