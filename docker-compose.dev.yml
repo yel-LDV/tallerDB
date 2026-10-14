@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # Desarrollo con hot-reload
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: tallerdb-dev
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:///./dev.db
+      SECRET_KEY: dev-secret-key-change-in-production-min-32-characters-long
+      SESSION_COOKIE_NAME: session
+      APP_NAME: TallerDB
+      DEBUG: "true"
+      ADMIN_EMAIL: admin@tallerdb.local
+      ADMIN_PASSWORD: admin123
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/.venv
+      - /app/__pycache__
+      - /app/.pytest_cache
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        python scripts/create_admin.py &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    stdin_open: true
+    tty: true

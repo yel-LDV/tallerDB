@@ -1,0 +1,52 @@
+{
+  "app": {
+    "name": "TallerDB",
+    "host": "0.0.0.0",
+    "port": 8000,
+    "debug": true,
+    "secret_key": "",
+    "session_cookie_name": "session",
+    "session_max_age_days": 7
+  },
+  "database": {
+    "type": "sqlite",
+    "sqlite": {
+      "path": "./dev.db"
+    },
+    "mysql": {
+      "host": "localhost",
+      "port": 3306,
+      "user": "taller",
+      "password": "tallerpass",
+      "database": "tallerdb",
+      "charset": "utf8mb4"
+    }
+  },
+  "security": {
+    "bcrypt_rounds": 12,
+    "password_min_length": 8,
+    "password_max_length": 72
+  },
+  "admin": {
+    "email": "admin@tallerdb.local",
+    "password": "admin123",
+    "force_change_on_first_login": false
+  },
+  "cors": {
+    "enabled": false,
+    "allow_origins": [],
+    "allow_credentials": true,
+    "allow_methods": ["GET", "POST"],
+    "allow_headers": ["*"]
+  },
+  "rate_limit": {
+    "enabled": false,
+    "requests_per_minute": 60,
+    "login_attempts_per_hour": 10
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "json",
+    "file": "logs/app.log"
+  }
+}

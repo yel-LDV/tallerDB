@@ -1,0 +1,52 @@
+# Docker ignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache
+.coverage
+*.cover
+*.log
+*.pot
+*.mo
+*.swp
+*~
+.DS_Store
+.env
+.venv
+venv
+*.db
+*.sqlite
+*.sqlite3
+*.pid
+*.lock
+server.log
+.pytest_cache
+.mypy_cache
+.ruff_cache
+*.egg-info
+dist
+build
+*.egg
+.tox
+.nox
+.coverage.*
+htmlcov
+.idea
+.vscode
+*.swp
+*.swo
+*~
+# Git
+.git
+.gitignore
+# Docs
+README.md
+*.md
+# Scripts
+scripts/*.py
+# Alembic (se copia en compose)
+alembic/versions/*
+!alembic/versions/.gitkeep

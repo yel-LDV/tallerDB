@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Panel - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <header class="dashboard-header">
+        <h1>{{ app_name }}</h1>
+        <div class="header-actions">
+            <button id="theme-toggle" class="btn btn-icon" aria-label="Cambiar tema"></button>
+            <form method="post" action="/logout" style="display: inline;">
+                <button type="submit" class="btn btn-secondary">Cerrar sesión</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="dashboard-content">
+        <div class="card">
+            <h2>Bienvenido, {{ user.email }}</h2>
+            <dl class="user-info">
+                <dt>ID</dt>
+                <dd>{{ user.id }}</dd>
+                <dt>Estado</dt>
+                <dd><span class="badge badge-success">Activo</span></dd>
+                <dt>Registrado</dt>
+                <dd>{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}</dd>
+            </dl>
+        </div>
+
+        <div class="card">
+            <h3>Próximos pasos</h3>
+            <ul class="steps">
+                <li>Agregar más modelos en <code>app/models/</code></li>
+                <li>Crear rutas en <code>app/auth/router.py</code> o nuevos routers</li>
+                <li>Ejecutar migraciones: <code>alembic revision --autogenerate -m "mensaje"</code></li>
+            </ul>
+        </div>
+    </main>
+</div>
+{% endblock %}

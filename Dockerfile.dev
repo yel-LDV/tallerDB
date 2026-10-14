@@ -1,0 +1,32 @@
+# Dockerfile.dev - Para desarrollo con hot-reload
+FROM python:3.12-slim
+
+# Instalar dependencias del sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libmariadb-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Crear usuario no-root
+RUN useradd --no-create-home --shell /bin/bash appuser
+
+WORKDIR /app
+
+# Instalar dependencias Python
+COPY requirements.txt .
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Cambiar propietario
+RUN chown -R appuser:appuser /app /opt/venv
+
+USER appuser
+
+# Exponer puerto
+EXPOSE 8000
+
+# Comando por defecto (se sobreescribe en docker-compose.dev.yml)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

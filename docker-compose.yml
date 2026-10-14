@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Base de datos MySQL
+  db:
+    image: mysql:8.0
+    container_name: tallerdb-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-tallerdb}
+      MYSQL_USER: ${MYSQL_USER:-taller}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tallerpass}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Aplicación FastAPI
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tallerdb-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql+asyncmy://${MYSQL_USER:-taller}:${MYSQL_PASSWORD:-tallerpass}@db:3306/${MYSQL_DATABASE:-tallerdb}
+      SECRET_KEY: ${SECRET_KEY:-change-this-in-production-min-32-chars}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-session}
+      APP_NAME: ${APP_NAME:-TallerDB}
+      DEBUG: ${DEBUG:-false}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./alembic:/app/alembic:ro
+      - ./scripts:/app/scripts:ro
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        python scripts/create_admin.py &&
+        python run.py
+      "
+
+volumes:
+  mysql_data:
