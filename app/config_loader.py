@@ -8,6 +8,15 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 from functools import lru_cache
 
+# Cargar variables del archivo .env en os.environ para que los overrides
+# por variable de entorno (p. ej. DATABASE_TYPE, MARIADB_HOST) funcionen.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:  # pragma: no cover - dotenv es opcional
+    pass
+
 
 class ConfigLoader:
     """Carga configuración desde config.json y variables de entorno."""
@@ -53,6 +62,14 @@ class ConfigLoader:
                 "type": "sqlite",
                 "sqlite": {"path": "./dev.db"},
                 "mysql": {
+                    "host": "localhost",
+                    "port": 3306,
+                    "user": "taller",
+                    "password": "tallerpass",
+                    "database": "tallerdb",
+                    "charset": "utf8mb4",
+                },
+                "mariadb": {
                     "host": "localhost",
                     "port": 3306,
                     "user": "taller",
@@ -115,16 +132,38 @@ class ConfigLoader:
         return self.get(key, default)
 
     def database_url(self) -> str:
-        """Construye DATABASE_URL según configuración."""
-        db_type = self.get_env_override("database.type", "DATABASE_TYPE", "sqlite")
+        """Construye DATABASE_URL según configuración.
 
-        if db_type == "mysql":
-            host = self.get_env_override("database.mysql.host", "MYSQL_HOST", "localhost")
-            port = self.get_env_override("database.mysql.port", "MYSQL_PORT", 3306)
-            user = self.get_env_override("database.mysql.user", "MYSQL_USER", "taller")
-            password = self.get_env_override("database.mysql.password", "MYSQL_PASSWORD", "tallerpass")
-            database = self.get_env_override("database.mysql.database", "MYSQL_DATABASE", "tallerdb")
-            charset = self.get_env_override("database.mysql.charset", "MYSQL_CHARSET", "utf8mb4")
+        Tipos soportados:
+          - sqlite: archivo local (default en desarrollo)
+          - mysql / mariadb: servidor MySQL o MariaDB vía asyncmy
+        """
+        db_type = self.get_env_override("database.type", "DATABASE_TYPE", "sqlite").lower()
+
+        if db_type in ("mysql", "mariadb"):
+            # MariaDB y MySQL comparten el driver asyncmy, solo cambian los
+            # nombres de sección/variables de entorno para leer la config.
+            section = db_type
+            env_prefix = "MARIADB" if db_type == "mariadb" else "MYSQL"
+
+            host = self.get_env_override(
+                f"database.{section}.host", f"{env_prefix}_HOST", "localhost"
+            )
+            port = self.get_env_override(
+                f"database.{section}.port", f"{env_prefix}_PORT", 3306
+            )
+            user = self.get_env_override(
+                f"database.{section}.user", f"{env_prefix}_USER", "taller"
+            )
+            password = self.get_env_override(
+                f"database.{section}.password", f"{env_prefix}_PASSWORD", "tallerpass"
+            )
+            database = self.get_env_override(
+                f"database.{section}.database", f"{env_prefix}_DATABASE", "tallerdb"
+            )
+            charset = self.get_env_override(
+                f"database.{section}.charset", f"{env_prefix}_CHARSET", "utf8mb4"
+            )
             return f"mysql+asyncmy://{user}:{password}@{host}:{port}/{database}?charset={charset}"
 
         # SQLite por defecto

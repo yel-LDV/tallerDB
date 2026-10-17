@@ -14,11 +14,20 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.database import Base
 from app.models.user import User  # noqa: F401
+from app.models.modelo import Modelo  # noqa: F401
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+# Prefer database URL from application settings (so alembic works with MariaDB/MySQL)
+try:
+    from app.config import settings
+
+    config.set_main_option("sqlalchemy.url", settings.database_url)
+except Exception:
+    pass
 
 target_metadata = Base.metadata
 

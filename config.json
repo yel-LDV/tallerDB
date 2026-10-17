@@ -20,6 +20,14 @@
       "password": "tallerpass",
       "database": "tallerdb",
       "charset": "utf8mb4"
+    },
+    "mariadb": {
+      "host": "localhost",
+      "port": 3306,
+      "user": "taller",
+      "password": "tallerpass",
+      "database": "tallerdb",
+      "charset": "utf8mb4"
     }
   },
   "security": {

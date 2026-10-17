@@ -11,6 +11,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from app.config import settings
 from app.database import init_db
 from app.auth.router import router as auth_router
+from app.modelos.router import router as modelos_router
 
 
 @asynccontextmanager
@@ -19,7 +20,11 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title=settings.app_name, lifespan=lifespan)
+app = FastAPI(
+    title=settings.app_name,
+    description="TallerDB - Sistema de catálogo de autos (Modelos)",
+    lifespan=lifespan,
+)
 
 # Security middleware (order matters!)
 if not settings.debug:
@@ -55,6 +60,7 @@ async def add_security_headers(request: Request, call_next):
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(auth_router)
+app.include_router(modelos_router)
 
 
 @app.get("/")

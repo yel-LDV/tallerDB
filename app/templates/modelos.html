@@ -1,0 +1,550 @@
+{% extends "base.html" %}
+
+{% block title %}Modelos · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Menú principal">
+        <div class="sidebar-header">
+            <h2>{{ app_name }}</h2>
+            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Alternar menú" aria-expanded="true">
+                <span class="toggle-icon">&#9776;</span>
+            </button>
+        </div>
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/dashboard" class="nav-link">
+                        <span class="nav-icon">&#128279;</span>
+                        <span class="nav-text">Panel</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/modelos" class="nav-link active">
+                        <span class="nav-icon">&#128663;</span>
+                        <span class="nav-text">Modelos</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <div class="sidebar-footer">
+            <form method="post" action="/logout" style="width: 100%;">
+                <button type="submit" class="btn btn-secondary btn-block">Cerrar sesión</button>
+            </form>
+        </div>
+    </aside>
+
+    <div class="main-wrapper">
+        <header class="top-header">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Abrir menú" aria-expanded="false">
+                <span class="toggle-icon">&#9776;</span>
+            </button>
+            <h1>{{ app_name }} · Modelos</h1>
+            <div class="header-actions">
+                <span class="user-badge {% if user.is_admin %}badge-admin{% else %}badge-user{% endif %}">
+                    {% if user.is_admin %}Admin{% else %}Usuario{% endif %}
+                </span>
+                <button id="theme-toggle" class="btn btn-icon" aria-label="Cambiar tema"></button>
+            </div>
+        </header>
+
+        <main class="main-content" id="main-content">
+            <!-- Filtros de búsqueda -->
+            <section class="content-section active">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Buscar y filtrar autos</h2>
+                        <div class="card-actions">
+                            {% if user.is_admin %}
+                            <button type="button" class="btn btn-primary" id="btn-nuevo-modelo">
+                                <span class="btn-icon">+</span> Nuevo modelo
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <form method="get" action="/modelos" class="filtros-form">
+                        <div class="filtros-row">
+                            <div class="filtros-group">
+                                <label for="filtro-q">Búsqueda general</label>
+                                <input type="text" id="filtro-q" name="q" value="{{ filtros.q }}" placeholder="Marca, modelo, descripción...">
+                            </div>
+                            <div class="filtros-group filtros-group-sm">
+                                <label for="filtro-marca">Marca</label>
+                                <select id="filtro-marca" name="marca">
+                                    <option value="">Todas</option>
+                                    {% for m in marcas %}
+                                    <option value="{{ m }}" {% if filtros.marca == m %}selected{% endif %}>{{ m }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="filtros-group filtros-group-sm">
+                                <label for="filtro-tipo">Tipo</label>
+                                <select id="filtro-tipo" name="tipo">
+                                    <option value="">Todos</option>
+                                    {% for t in tipos %}
+                                    <option value="{{ t }}" {% if filtros.tipo == t %}selected{% endif %}>{{ t|capitalize }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="filtros-group filtros-group-sm">
+                                <label for="filtro-disponible">Disponibilidad</label>
+                                <select id="filtro-disponible" name="disponible">
+                                    <option value="">Todos</option>
+                                    <option value="1" {% if filtros.disponible == '1' %}selected{% endif %}>Disponibles</option>
+                                    <option value="0" {% if filtros.disponible == '0' %}selected{% endif %}>No disponibles</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="filtros-row">
+                            <div class="filtros-group filtros-group-xs">
+                                <label for="filtro-anio-min">Año desde</label>
+                                <input type="number" id="filtro-anio-min" name="anio_min" min="1900" max="2100" value="{{ filtros.anio_min }}" placeholder="1900">
+                            </div>
+                            <div class="filtros-group filtros-group-xs">
+                                <label for="filtro-anio-max">Año hasta</label>
+                                <input type="number" id="filtro-anio-max" name="anio_max" min="1900" max="2100" value="{{ filtros.anio_max }}" placeholder="2026">
+                            </div>
+                            <div class="filtros-group filtros-group-sm">
+                                <label for="filtro-orden">Ordenar por</label>
+                                <select id="filtro-orden" name="orden">
+                                    <option value="recientes" {% if filtros.orden == 'recientes' %}selected{% endif %}>Más recientes</option>
+                                    <option value="precio_asc" {% if filtros.orden == 'precio_asc' %}selected{% endif %}>Precio: menor a mayor</option>
+                                    <option value="precio_desc" {% if filtros.orden == 'precio_desc' %}selected{% endif %}>Precio: mayor a menor</option>
+                                    <option value="anio_desc" {% if filtros.orden == 'anio_desc' %}selected{% endif %}>Año: más nuevo</option>
+                                    <option value="anio_asc" {% if filtros.orden == 'anio_asc' %}selected{% endif %}>Año: más antiguo</option>
+                                    <option value="marca" {% if filtros.orden == 'marca' %}selected{% endif %}>Marca</option>
+                                </select>
+                            </div>
+                            <div class="filtros-actions">
+                                <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+                                <a href="/modelos" class="btn btn-secondary">Limpiar</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Estadísticas (consultas) -->
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <span class="stat-label">Total de modelos</span>
+                        <span class="stat-value">{{ stats.total }}</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Disponibles</span>
+                        <span class="stat-value">{{ stats.disponibles }}</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Precio promedio</span>
+                        <span class="stat-value">$ {{ '%.0f'|format(stats.precio_promedio) }}</span>
+                    </div>
+                    {% if stats.anio_min and stats.anio_max %}
+                    <div class="stat-card">
+                        <span class="stat-label">Rango de años</span>
+                        <span class="stat-value">{{ stats.anio_min }} - {{ stats.anio_max }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Galería de autos (mostrar autos) -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Catálogo de autos</h2>
+                        <span class="text-muted">Mostrando {{ modelos|length }} resultados</span>
+                    </div>
+                    {% if modelos %}
+                    <div class="modelos-grid">
+                        {% for m in modelos %}
+                        <article class="modelo-card" data-id="{{ m.id }}">
+                            <div class="modelo-card-image">
+                                <div class="modelo-car-avatar">
+                                    <span class="car-icon">&#128663;</span>
+                                </div>
+                                {% if m.imagen_url %}
+                                <img src="{{ m.imagen_url }}" alt="{{ m.marca }} {{ m.nombre }}" onerror="this.style.display='none'">
+                                {% endif %}
+                            </div>
+                            <div class="modelo-card-body">
+                                <header class="modelo-card-header">
+                                    <h3 class="modelo-titulo">{{ m.marca }} {{ m.nombre }}</h3>
+                                    <span class="badge {% if m.disponible %}badge-success{% else %}badge-danger{% endif %}">
+                                        {% if m.disponible %}Disponible{% else %}No disponible{% endif %}
+                                    </span>
+                                </header>
+                                <dl class="modelo-info">
+                                    <div>
+                                        <dt>Año</dt>
+                                        <dd>{{ m.anio }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Tipo</dt>
+                                        <dd>{{ m.tipo|capitalize }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Transmisión</dt>
+                                        <dd>{{ m.transmision|capitalize }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Color</dt>
+                                        <dd>{{ m.color|default('N/D') }}</dd>
+                                    </div>
+                                    <div class="modelo-info-full">
+                                        <dt>Precio</dt>
+                                        <dd class="modelo-precio">$ {{ '%.2f'|format(m.precio) }}</dd>
+                                    </div>
+                                    {% if m.descripcion %}
+                                    <div class="modelo-info-full">
+                                        <dt>Descripción</dt>
+                                        <dd>{{ m.descripcion }}</dd>
+                                    </div>
+                                    {% endif %}
+                                </dl>
+                                <div class="modelo-meta">
+                                    <small class="text-muted">Creado: {{ m.created_at.strftime('%d/%m/%Y') }}</small>
+                                </div>
+                            </div>
+                            {% if user.is_admin %}
+                            <footer class="modelo-card-footer">
+                                <button type="button" class="btn btn-secondary btn-sm btn-editar-modelo" data-id="{{ m.id }}">
+                                    Editar
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm btn-eliminar-modelo" data-id="{{ m.id }}">
+                                    Eliminar
+                                </button>
+                            </footer>
+                            {% endif %}
+                        </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#128663;</div>
+                        <h3>No hay modelos que coincidan con los filtros</h3>
+                        <p class="text-muted">Ajusta los filtros o crea el primer modelo.</p>
+                        {% if user.is_admin %}
+                        <button type="button" class="btn btn-primary" id="btn-nuevo-modelo-2">Crear primer modelo</button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+</div>
+
+<!-- Modal Crear/Editar Modelo (CRUD) -->
+<div class="modal-overlay" id="modeloModal" role="dialog" aria-labelledby="modeloModalTitle" aria-hidden="true">
+    <div class="modal" style="max-width: 620px;">
+        <div class="modal-header">
+            <h3 id="modeloModalTitle">Nuevo modelo</h3>
+            <button type="button" class="modal-close" id="cerrarModeloModal" aria-label="Cerrar">&times;</button>
+        </div>
+        <form id="modeloForm" class="modal-body modelo-form">
+            <input type="hidden" id="modeloId" name="id" value="">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="input-marca">Marca</label>
+                    <input type="text" id="input-marca" name="marca" required maxlength="100" placeholder="Toyota">
+                </div>
+                <div class="form-group">
+                    <label for="input-nombre">Nombre del modelo</label>
+                    <input type="text" id="input-nombre" name="nombre" required maxlength="120" placeholder="Corolla">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="input-anio">Año</label>
+                    <input type="number" id="input-anio" name="anio" required min="1900" max="2100" placeholder="2024">
+                </div>
+                <div class="form-group">
+                    <label for="input-precio">Precio ($)</label>
+                    <input type="number" id="input-precio" name="precio" required min="0" step="0.01" placeholder="19999.99">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="input-color">Color</label>
+                    <input type="text" id="input-color" name="color" maxlength="50" placeholder="Blanco">
+                </div>
+                <div class="form-group">
+                    <label for="input-tipo">Tipo</label>
+                    <select id="input-tipo" name="tipo" required>
+                        {% for t in tipos %}
+                        <option value="{{ t }}">{{ t|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="input-transmision">Transmisión</label>
+                    <select id="input-transmision" name="transmision" required>
+                        {% for tr in transmisiones %}
+                        <option value="{{ tr }}">{{ tr|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="input-disponible">Disponibilidad</label>
+                    <select id="input-disponible" name="disponible" required>
+                        <option value="true">Disponible</option>
+                        <option value="false">No disponible</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="input-imagen">URL de imagen (opcional)</label>
+                    <input type="url" id="input-imagen" name="imagen_url" maxlength="500" placeholder="https://...">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="input-descripcion">Descripción (opcional)</label>
+                <textarea id="input-descripcion" name="descripcion" rows="3" maxlength="1000" placeholder="Características principales..."></textarea>
+            </div>
+            <div id="modeloError" class="alert alert-error" style="display: none;"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelarModeloModal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnGuardarModelo">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ===== SIDEBAR / THEME (reutiliza base style, agregar mínimos) =====
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const mainWrapper = document.querySelector('.main-wrapper');
+
+    function toggleSidebar(collapsed) {
+        if (collapsed === undefined) {
+            collapsed = sidebar.classList.contains('collapsed');
+        }
+        if (collapsed) {
+            sidebar.classList.remove('collapsed');
+            sidebarToggle.setAttribute('aria-expanded', 'true');
+        } else {
+            sidebar.classList.add('collapsed');
+            sidebarToggle.setAttribute('aria-expanded', 'false');
+        }
+        localStorage.setItem('sidebarCollapsed', collapsed ? 'false' : 'true');
+    }
+
+    function toggleMobileMenu(open) {
+        if (open === undefined) {
+            open = sidebar.classList.contains('mobile-open');
+        }
+        if (open) {
+            sidebar.classList.add('mobile-open');
+            sidebarOverlay.classList.add('visible');
+            mobileMenuToggle.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        } else {
+            sidebar.classList.remove('mobile-open');
+            sidebarOverlay.classList.remove('visible');
+            mobileMenuToggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        }
+    }
+
+    if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
+    if (mobileMenuToggle) mobileMenuToggle.addEventListener('click', toggleMobileMenu);
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', function(){ toggleMobileMenu(false); });
+
+    const savedCollapsed = localStorage.getItem('sidebarCollapsed');
+    if (savedCollapsed === 'true') toggleSidebar(true);
+
+    function handleResize() {
+        if (window.innerWidth < 768) {
+            sidebar.classList.remove('collapsed');
+        } else {
+            sidebar.classList.remove('mobile-open');
+            sidebarOverlay.classList.remove('visible');
+            document.body.style.overflow = '';
+        }
+    }
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    // ===== THEME TOGGLE (base) =====
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    if (themeToggle) {
+        const updateThemeIcon = (theme) => {
+            themeToggle.textContent = theme === 'dark' ? '☀' : '☾';
+            themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+        };
+        const currentTheme = html.getAttribute('data-theme') || 'light';
+        updateThemeIcon(currentTheme);
+        themeToggle.addEventListener('click', function() {
+            const current = html.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon(next);
+        });
+    }
+
+    // ===== MODAL CRUD MODELOS =====
+    const modeloModal = document.getElementById('modeloModal');
+    const modeloForm = document.getElementById('modeloForm');
+    const modeloIdInput = document.getElementById('modeloId');
+    const modeloModalTitle = document.getElementById('modeloModalTitle');
+    const modeloError = document.getElementById('modeloError');
+    const btnNuevo = document.getElementById('btn-nuevo-modelo');
+    const btnNuevo2 = document.getElementById('btn-nuevo-modelo-2');
+    const cerrarModal = document.getElementById('cerrarModeloModal');
+    const cancelarModal = document.getElementById('cancelarModeloModal');
+    const btnGuardar = document.getElementById('btnGuardarModelo');
+
+    function abrirModalCrear() {
+        modeloForm.reset();
+        modeloIdInput.value = '';
+        modeloModalTitle.textContent = 'Nuevo modelo';
+        modeloError.style.display = 'none';
+        modeloError.textContent = '';
+        modeloModal.classList.add('visible');
+        modeloModal.setAttribute('aria-hidden', 'false');
+        document.getElementById('input-marca').focus();
+        document.body.style.overflow = 'hidden';
+    }
+
+    function abrirModalEditar(data) {
+        modeloForm.reset();
+        modeloModalTitle.textContent = 'Editar modelo';
+        modeloError.style.display = 'none';
+        modeloError.textContent = '';
+        modeloIdInput.value = data.id;
+        document.getElementById('input-marca').value = data.marca;
+        document.getElementById('input-nombre').value = data.nombre;
+        document.getElementById('input-anio').value = data.anio;
+        document.getElementById('input-precio').value = data.precio;
+        document.getElementById('input-color').value = data.color || '';
+        document.getElementById('input-tipo').value = data.tipo;
+        document.getElementById('input-transmision').value = data.transmision;
+        document.getElementById('input-disponible').value = data.disponible ? 'true' : 'false';
+        document.getElementById('input-imagen').value = data.imagen_url || '';
+        document.getElementById('input-descripcion').value = data.descripcion || '';
+        modeloModal.classList.add('visible');
+        modeloModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function cerrarModeloModalFn() {
+        modeloModal.classList.remove('visible');
+        modeloModal.setAttribute('aria-hidden', 'true');
+        modeloForm.reset();
+        modeloError.style.display = 'none';
+        modeloError.textContent = '';
+        modeloIdInput.value = '';
+        document.body.style.overflow = '';
+        btnGuardar.disabled = false;
+        btnGuardar.textContent = 'Guardar';
+    }
+
+    if (btnNuevo) btnNuevo.addEventListener('click', abrirModalCrear);
+    if (btnNuevo2) btnNuevo2.addEventListener('click', abrirModalCrear);
+    if (cerrarModal) cerrarModal.addEventListener('click', cerrarModeloModalFn);
+    if (cancelarModal) cancelarModal.addEventListener('click', cerrarModeloModalFn);
+    if (modeloModal) {
+        modeloModal.addEventListener('click', function(e){
+            if (e.target === modeloModal) cerrarModeloModalFn();
+        });
+    }
+    document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape' && modeloModal && modeloModal.classList.contains('visible')) {
+            cerrarModeloModalFn();
+        }
+    });
+
+    // Botones editar en cada card
+    document.querySelectorAll('.btn-editar-modelo').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            try {
+                const res = await fetch('/modelos/api/' + id);
+                if (!res.ok) throw new Error('No se pudo obtener el modelo');
+                const data = await res.json();
+                abrirModalEditar(data);
+            } catch (err) {
+                alert('Error al cargar modelo para edición');
+            }
+        });
+    });
+
+    // Botón eliminar
+    document.querySelectorAll('.btn-eliminar-modelo').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            if (!confirm('¿Eliminar este modelo? Esta acción no se puede deshacer.')) return;
+            try {
+                const res = await fetch('/modelos/api/' + id, { method: 'DELETE' });
+                if (!res.ok) {
+                    const err = await res.json().catch(()=>({detail:'Error'}));
+                    throw new Error(err.detail || 'Error al eliminar');
+                }
+                window.location.reload();
+            } catch (err) {
+                alert(err.message || 'Error de conexión');
+            }
+        });
+    });
+
+    // Submit crear/editar
+    modeloForm.addEventListener('submit', async function(e){
+        e.preventDefault();
+        modeloError.style.display = 'none';
+        modeloError.textContent = '';
+
+        const formData = new FormData(modeloForm);
+        const id = formData.get('id');
+        const payload = {
+            marca: formData.get('marca').trim(),
+            nombre: formData.get('nombre').trim(),
+            anio: parseInt(formData.get('anio')),
+            precio: parseFloat(formData.get('precio')),
+            color: formData.get('color').trim() || null,
+            tipo: formData.get('tipo'),
+            transmision: formData.get('transmision'),
+            disponible: formData.get('disponible') === 'true',
+            imagen_url: formData.get('imagen_url').trim() || null,
+            descripcion: formData.get('descripcion').trim() || null,
+        };
+
+        btnGuardar.disabled = true;
+        btnGuardar.textContent = 'Guardando...';
+
+        try {
+            let url = '/modelos/api';
+            let method = 'POST';
+            if (id) {
+                url = '/modelos/api/' + id;
+                method = 'PUT';
+            }
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(()=>({detail:'Error al guardar'}));
+                throw new Error(err.detail || 'Error al guardar');
+            }
+            cerrarModeloModalFn();
+            window.location.reload();
+        } catch (err) {
+            modeloError.textContent = err.message || 'Error de conexión';
+            modeloError.style.display = 'block';
+        } finally {
+            btnGuardar.disabled = false;
+            btnGuardar.textContent = 'Guardar';
+        }
+    });
+});
+</script>
+{% endblock %}

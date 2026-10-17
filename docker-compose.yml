@@ -1,23 +1,26 @@
 version: '3.8'
 
 services:
-  # Base de datos MySQL
+  # Base de datos MariaDB
+  # Los scripts SQL de database/init/ se ejecutan automáticamente la primera
+  # vez que se levanta el volumen de datos (esquema + datos de ejemplo).
   db:
-    image: mysql:8.0
-    container_name: tallerdb-mysql
+    image: mariadb:11
+    container_name: tallerdb-mariadb
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-tallerdb}
-      MYSQL_USER: ${MYSQL_USER:-taller}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tallerpass}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-rootpass}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-tallerdb}
+      MARIADB_USER: ${MARIADB_USER:-taller}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-tallerpass}
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpass}"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -31,7 +34,12 @@ services:
     container_name: tallerdb-app
     restart: unless-stopped
     environment:
-      DATABASE_URL: mysql+asyncmy://${MYSQL_USER:-taller}:${MYSQL_PASSWORD:-tallerpass}@db:3306/${MYSQL_DATABASE:-tallerdb}
+      DATABASE_TYPE: mariadb
+      MARIADB_HOST: db
+      MARIADB_PORT: 3306
+      MARIADB_USER: ${MARIADB_USER:-taller}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-tallerpass}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-tallerdb}
       SECRET_KEY: ${SECRET_KEY:-change-this-in-production-min-32-chars}
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-session}
       APP_NAME: ${APP_NAME:-TallerDB}
@@ -44,12 +52,13 @@ services:
     volumes:
       - ./alembic:/app/alembic:ro
       - ./scripts:/app/scripts:ro
+    # El esquema y los datos iniciales los crea MariaDB con database/init/.
+    # Solo se crea el usuario administrador y se levanta la app.
     command: >
       sh -c "
-        alembic upgrade head &&
         python scripts/create_admin.py &&
         python run.py
       "
 
 volumes:
-  mysql_data:
+  mariadb_data:

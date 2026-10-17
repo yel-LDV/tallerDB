@@ -1,6 +1,8 @@
-# TallerDB - Sistema de Autenticación Mínimo
+# TallerDB - Catálogo de Autos (categoría «Modelos»)
 
-Proyecto base con FastAPI + Jinja2 + MySQL + Sessions + Dark Mode
+Proyecto base con **FastAPI + Jinja2 + MariaDB + Sessions + Dark Mode**, extendido
+con un **catálogo de autos** (categoría «Modelos») que incluye interfaz web y API REST
+con operaciones CRUD.
 
 ## Características
 
@@ -8,8 +10,11 @@ Proyecto base con FastAPI + Jinja2 + MySQL + Sessions + Dark Mode
 - **Sesiones seguras** (HttpOnly, SameSite=Lax, 7 días)
 - **Hash de contraseñas** con bcrypt
 - **Dark/Light mode** (preferencia del sistema por defecto, persiste en localStorage)
+- **Nueva categoría «Modelos»** — catálogo de autos con galería, búsqueda, filtros,
+  ordenamiento, estadísticas y CRUD completo vía API REST
+- **Conexión a MariaDB** (driver asíncrono `asyncmy`), configurable también con SQLite
 - **Migraciones** con Alembic
-- **Arquitectura modular** lista para escalar
+- **Scripts SQL** de esquema, datos de ejemplo y pruebas CRUD
 
 ## Stack
 
@@ -17,64 +22,83 @@ Proyecto base con FastAPI + Jinja2 + MySQL + Sessions + Dark Mode
 |------|------------|
 | Web | FastAPI 0.115 |
 | ORM | SQLAlchemy 2.0 (async) |
-| DB | MySQL/MariaDB (asyncmy) |
+| DB | MariaDB 11 / MySQL (driver `asyncmy`) · SQLite opcional |
 | Templates | Jinja2 |
 | Auth | Starlette Sessions + bcrypt |
 | Validación | Pydantic 2 |
 | Config | pydantic-settings |
+| Migraciones | Alembic 1.13 |
 
 ## Estructura
 
 ```
 tallerdbProyect/
 ├── app/
-│   ├── config.py          # Settings (pydantic-settings)
-│   ├── database.py        # SQLAlchemy async engine/session
-│   ├── main.py            # FastAPI app + middleware
+│   ├── config.py / config_loader.py   # Settings + construcción de la URL de BD
+│   ├── database.py                    # SQLAlchemy async engine/session
+│   ├── main.py                        # FastAPI app + middleware
 │   ├── models/
-│   │   └── user.py        # User model
+│   │   ├── user.py                    # Entidad User
+│   │   └── modelo.py                  # Entidad Modelo (tabla modelos)  ← NUEVO
 │   ├── schemas/
-│   │   └── auth.py        # Pydantic schemas
+│   │   ├── auth.py
+│   │   └── modelo.py                  # Validación Pydantic del catálogo ← NUEVO
 │   ├── auth/
-│   │   ├── security.py    # Hash/verify passwords
-│   │   ├── deps.py        # Auth dependencies
-│   │   └── router.py      # Routes: /login, /register, /logout, /dashboard
-│   ├── templates/
-│   │   ├── base.html      # Layout + theme toggle
-│   │   ├── login.html
-│   │   ├── register.html
-│   │   └── dashboard.html
-│   └── static/
-│       └── style.css      # CSS con variables CSS para temas
-├── alembic/               # Migraciones
-├── tests/
-├── .env                   # Variables de entorno (no commitear)
-├── .env.example
+│   │   ├── security.py / deps.py / router.py
+│   ├── modelos/                       # Categoría Modelos                   ← NUEVO
+│   │   └── router.py                  # Página HTML + API CRUD
+│   └── templates/
+│       ├── base.html / login.html / register.html / dashboard.html
+│       └── modelos.html               # Interfaz del catálogo               ← NUEVO
+├── database/                          # Scripts SQL                          ← NUEVO
+│   ├── schema_mariadb.sql             # DDL del esquema
+│   ├── seed_modelos.sql               # Datos de ejemplo
+│   ├── pruebas_crud.sql               # Pruebas INSERT/SELECT/UPDATE/DELETE
+│   └── init/                          # Init automático del contenedor MariaDB
+│       ├── 01_schema.sql
+│       └── 02_seed_modelos.sql
+├── docs/INFORME_EVIDENCIA.md          # Informe (portada, desarrollo, etc.)  ← NUEVO
+├── alembic/                           # Migraciones
+├── tests/                             # Pruebas (auth + modelos)
+├── docker-compose.yml                 # App + MariaDB
 ├── requirements.txt
-└── run.py                 # Entry point
+└── run.py
 ```
 
 ## Instalación
 
+### Opción A — Docker (MariaDB)
+
 ```bash
-# 1. Crear venv e instalar deps
-python -m venv venv
-source venv/bin/activate
+cp .env.example .env
+docker compose up --build
+# La base de datos se crea y se puebla automáticamente con database/init/
+```
+
+Abrir: http://localhost:8000
+
+### Opción B — Local con MariaDB
+
+```bash
+# 1. Entorno virtual
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Configurar .env
-cp .env.example .env
-# Editar .env con tus credenciales MySQL y SECRET_KEY
+# 2. Crear la base de datos y el esquema
+mariadb -u root -p < database/schema_mariadb.sql
 
-# 3. Crear BD en MySQL
-mysql -u root -p -e "CREATE DATABASE tallerdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# 3. Datos de ejemplo
+mariadb -u taller -p tallerdb < database/seed_modelos.sql
 
-# 4. Ejecutar migraciones
+# 3. Configurar .env  (ver ".env")
+#    DATABASE_TYPE=mariadb  y las variables MARIAB_* … MARIADB_*
+
+# 4. Migraciones y usuario admin
 alembic upgrade head
+python scripts/create_admin.py
 
 # 5. Levantar servidor
 python run.py
-# o: uvicorn app.main:app --reload
 ```
 
 ## Uso
@@ -85,13 +109,55 @@ python run.py
 | `/login` | GET/POST | Inicio de sesión |
 | `/logout` | POST | Cerrar sesión |
 | `/dashboard` | GET | Panel protegido (requiere auth) |
+| **`/modelos`** | **GET** | **Catálogo de autos con filtros (requiere auth)** |
+| **`/modelos/api`** | **GET/POST** | **Listar / crear modelos (POST requiere admin)** |
+| **`/modelos/api/{id}`** | **GET/PUT/DELETE** | **Consultar / actualizar / borrar (PUT y DELETE requieren admin)** |
 | `/docs` | GET | Swagger UI (API docs) |
 
-## Dark Mode
+> Solo los administradores pueden crear, editar y borrar modelos. Cualquier usuario
+> autenticado puede consultar el catálogo.
 
-- Por defecto usa `prefers-color-scheme` del sistema
-- Click en el icono sol/luna en el dashboard para alternar
-- Preferencia guardada en `localStorage`
+## Scripts SQL (`database/`)
+
+| Archivo | Propósito |
+|---------|-----------|
+| `schema_mariadb.sql` | Crea la base de datos y las tablas (`users`, `modelos`). |
+| `seed_modelos.sql` | Inserta 18 autos de ejemplo. |
+| `pruebas_crud.sql` | Demuestra INSERT / SELECT / UPDATE / DELETE con `ROLLBACK`. |
+| `init/*.sql` | Ejecutados automáticamente por la imagen de MariaDB en Docker. |
+
+```bash
+# Pruebas CRUD (incluye una violación de UNIQUE a propósito)
+mariadb -u taller -p --force tallerdb < database/pruebas_crud.sql
+```
+
+## Base de datos: SQLite o MariaDB
+
+El tipo de base de datos se controla con `DATABASE_TYPE` y la sección correspondiente
+en `config.json` / variables de entorno:
+
+```env
+# MariaDB (recomendado)
+DATABASE_TYPE=mariadb
+MARIADB_HOST=localhost
+MARIADB_PORT=3306
+MARIADB_USER=taller
+MARIADB_PASSWORD=tallerpass
+MARIADB_DATABASE=tallerdb
+
+# SQLite (desarrollo rápido, sin servidor)
+DATABASE_TYPE=sqlite
+SQLITE_PATH=./dev.db
+```
+
+## Evidencia / informe
+
+El informe completo con portada, introducción, descripción de interfaces, pruebas
+CRUD, código SQL, resultados, recomendaciones, conclusiones y referencias APA está en:
+
+```
+docs/INFORME_EVIDENCIA.md
+```
 
 ## Desarrollo
 
@@ -99,27 +165,6 @@ python run.py
 # Nueva migración tras cambiar modelos
 alembic revision --autogenerate -m "descripcion"
 
-# Ver migraciones pendientes
-alembic history
-
 # Tests
 pytest
 ```
-
-## Variables de entorno (.env)
-
-```env
-DATABASE_URL=mysql+asyncmy://user:password@localhost:3306/tallerdb
-SECRET_KEY=clave-secreta-muy-larga-y-aleatoria-para-produccion
-SESSION_COOKIE_NAME=session
-APP_NAME=TallerDB
-DEBUG=true
-```
-
-## Producción
-
-- `DEBUG=false`
-- `SECRET_KEY` fuerte (32+ chars aleatorios)
-- `https_only=true` en SessionMiddleware (requiere HTTPS)
-- Proxy reverso (nginx) + TLS
-- MySQL con usuario dedicado y permisos mínimos

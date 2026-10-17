@@ -17,6 +17,12 @@
                         <span class="nav-text">Panel</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="/modelos" class="nav-link">
+                        <span class="nav-icon">&#128663;</span>
+                        <span class="nav-text">Modelos</span>
+                    </a>
+                </li>
                 {% if user.is_admin %}
                 <li class="nav-divider"></li>
                 <li class="nav-section">Administración</li>
@@ -71,6 +77,10 @@
                 <div class="card">
                     <h3>Acciones rápidas</h3>
                     <div class="quick-actions">
+                        <a href="/modelos" class="quick-action">
+                            <span class="qa-icon">&#128663;</span>
+                            <span class="qa-text">Ver modelos</span>
+                        </a>
                         <a href="#users" class="quick-action {% if not user.is_admin %}disabled{% endif %}" 
                            data-section="users" {% if not user.is_admin %}aria-disabled="true"{% endif %}>
                             <span class="qa-icon">&#128100;</span>
@@ -80,11 +90,6 @@
                         <a href="#" class="quick-action disabled" aria-disabled="true">
                             <span class="qa-icon">&#128196;</span>
                             <span class="qa-text">Configuración</span>
-                            <span class="qa-lock">&#128274;</span>
-                        </a>
-                        <a href="#" class="quick-action disabled" aria-disabled="true">
-                            <span class="qa-icon">&#128221;</span>
-                            <span class="qa-text">Reportes</span>
                             <span class="qa-lock">&#128274;</span>
                         </a>
                     </div>
