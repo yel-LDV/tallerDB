@@ -62,11 +62,18 @@
                             {% endif %}
                         </div>
                     </div>
+                    {% if errores_filtros %}
+                    <div class="alert alert-error" role="alert">
+                        {% for error in errores_filtros %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     <form method="get" action="/modelos" class="filtros-form">
                         <div class="filtros-row">
                             <div class="filtros-group">
                                 <label for="filtro-q">Búsqueda general</label>
-                                <input type="text" id="filtro-q" name="q" value="{{ filtros.q }}" placeholder="Marca, modelo, descripción...">
+                                <input type="text" id="filtro-q" name="q" value="{{ filtros.q }}" maxlength="100" placeholder="Marca, modelo, color, transmisión...">
                             </div>
                             <div class="filtros-group filtros-group-sm">
                                 <label for="filtro-marca">Marca</label>
@@ -121,12 +128,18 @@
                             </div>
                         </div>
                     </form>
+                    {% if filtros_activos %}
+                    <div class="filtros-activos">
+                        <span class="text-muted">Filtros aplicados</span>
+                        <a href="/modelos" class="btn btn-secondary btn-sm">Limpiar filtros</a>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <!-- Estadísticas (consultas) -->
                 <div class="stats-row">
                     <div class="stat-card">
-                        <span class="stat-label">Total de modelos</span>
+                        <span class="stat-label">Resultados</span>
                         <span class="stat-value">{{ stats.total }}</span>
                     </div>
                     <div class="stat-card">
@@ -149,7 +162,13 @@
                 <div class="card">
                     <div class="card-header">
                         <h2>Catálogo de autos</h2>
-                        <span class="text-muted">Mostrando {{ modelos|length }} resultados</span>
+                        <span class="text-muted" aria-live="polite">
+                            {% if paginacion.total %}
+                            Mostrando {{ paginacion.inicio }}-{{ paginacion.fin }} de {{ paginacion.total }} resultados
+                            {% else %}
+                            Sin resultados
+                            {% endif %}
+                        </span>
                     </div>
                     {% if modelos %}
                     <div class="modelos-grid">
@@ -161,6 +180,9 @@
                                 </div>
                                 {% if m.imagen_url %}
                                 <img src="{{ m.imagen_url }}" alt="{{ m.marca }} {{ m.nombre }}" onerror="this.style.display='none'">
+                                {% endif %}
+                                {% if m.modelo_3d_url %}
+                                <span class="modelo-3d-chip" title="Este auto tiene un modelo 3D">3D</span>
                                 {% endif %}
                             </div>
                             <div class="modelo-card-body">
@@ -202,27 +224,68 @@
                                     <small class="text-muted">Creado: {{ m.created_at.strftime('%d/%m/%Y') }}</small>
                                 </div>
                             </div>
-                            {% if user.is_admin %}
+                            {% if user.is_admin or m.modelo_3d_url %}
                             <footer class="modelo-card-footer">
+                                {% if m.modelo_3d_url %}
+                                <button type="button" class="btn btn-primary btn-sm btn-ver-3d"
+                                        data-src="{{ m.modelo_3d_url }}"
+                                        data-nombre="{{ m.marca }} {{ m.nombre }}">
+                                    Ver en 3D
+                                </button>
+                                {% endif %}
+                                {% if user.is_admin %}
+                                <button type="button" class="btn btn-secondary btn-sm btn-gestionar-3d" data-id="{{ m.id }}">
+                                    {% if m.modelo_3d_url %}Reemplazar 3D{% else %}Añadir 3D{% endif %}
+                                </button>
                                 <button type="button" class="btn btn-secondary btn-sm btn-editar-modelo" data-id="{{ m.id }}">
                                     Editar
                                 </button>
                                 <button type="button" class="btn btn-danger btn-sm btn-eliminar-modelo" data-id="{{ m.id }}">
                                     Eliminar
                                 </button>
+                                {% endif %}
                             </footer>
                             {% endif %}
                         </article>
                         {% endfor %}
                     </div>
+                    {% if paginacion.total_paginas > 1 %}
+                    <nav class="pagination" aria-label="Paginación del catálogo">
+                        {% if paginacion.url_anterior %}
+                        <a href="{{ paginacion.url_anterior }}" class="btn btn-secondary btn-sm">&laquo; Anterior</a>
+                        {% else %}
+                        <span class="btn btn-secondary btn-sm" aria-disabled="true">&laquo; Anterior</span>
+                        {% endif %}
+                        <span class="pagination-info text-muted">
+                            Página {{ paginacion.page }} de {{ paginacion.total_paginas }}
+                        </span>
+                        {% if paginacion.url_siguiente %}
+                        <a href="{{ paginacion.url_siguiente }}" class="btn btn-secondary btn-sm">Siguiente &raquo;</a>
+                        {% else %}
+                        <span class="btn btn-secondary btn-sm" aria-disabled="true">Siguiente &raquo;</span>
+                        {% endif %}
+                    </nav>
+                    {% endif %}
                     {% else %}
                     <div class="empty-state">
                         <div class="empty-state-icon">&#128663;</div>
+                        {% if filtros_activos %}
                         <h3>No hay modelos que coincidan con los filtros</h3>
-                        <p class="text-muted">Ajusta los filtros o crea el primer modelo.</p>
-                        {% if user.is_admin %}
-                        <button type="button" class="btn btn-primary" id="btn-nuevo-modelo-2">Crear primer modelo</button>
+                        <p class="text-muted">Ajusta o limpia los filtros para ver más resultados.</p>
+                        {% else %}
+                        <h3>El catálogo está vacío</h3>
+                        <p class="text-muted">Todavía no hay modelos registrados.</p>
                         {% endif %}
+                        <div class="empty-state-actions">
+                            {% if filtros_activos %}
+                            <a href="/modelos" class="btn btn-secondary">Limpiar filtros</a>
+                            {% endif %}
+                            {% if user.is_admin %}
+                            <button type="button" class="btn btn-primary" id="btn-nuevo-modelo-2">
+                                {% if filtros_activos %}Crear modelo{% else %}Crear primer modelo{% endif %}
+                            </button>
+                            {% endif %}
+                        </div>
                     </div>
                     {% endif %}
                 </div>
@@ -309,9 +372,74 @@
         </form>
     </div>
 </div>
+
+<!-- Visor 3D -->
+<div class="modal-overlay" id="viewer3dModal" role="dialog" aria-modal="true" aria-labelledby="viewer3dTitle" aria-hidden="true">
+    <div class="modal modal-3d">
+        <div class="modal-header">
+            <h3 id="viewer3dTitle">Vista 3D</h3>
+            <button type="button" class="modal-close" id="cerrarViewer3d" aria-label="Cerrar">&times;</button>
+        </div>
+        <div class="modal-body viewer-3d-body">
+            <div class="viewer-3d-stage">
+                <model-viewer
+                    id="modelViewer3d"
+                    camera-controls
+                    auto-rotate
+                    touch-action="pan-y"
+                    shadow-intensity="1"
+                    environment-image="neutral"
+                    alt="Modelo 3D del auto"
+                    reveal="auto">
+                </model-viewer>
+                <div class="viewer-3d-loading" id="viewer3dLoading" hidden>
+                    <span class="spinner" aria-hidden="true"></span>
+                    Cargando modelo 3D...
+                </div>
+            </div>
+            <div class="alert alert-error" id="viewer3dError" role="alert" hidden>
+                No se pudo cargar el modelo 3D.
+            </div>
+            <p class="viewer-3d-hint text-muted">
+                Arrastra para rotar &middot; Usa la rueda o pellizca para acercar
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Gestión 3D (admin) -->
+<div class="modal-overlay" id="modelo3dModal" role="dialog" aria-modal="true" aria-labelledby="modelo3dTitle" aria-hidden="true">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modelo3dTitle">Modelo 3D</h3>
+            <button type="button" class="modal-close" id="cerrarModelo3d" aria-label="Cerrar">&times;</button>
+        </div>
+        <form id="modelo3dForm" class="modal-body modelo-form">
+            <input type="hidden" id="modelo3dId" name="id" value="">
+            <div class="modelo-3d-actual" id="modelo3dActual" hidden>
+                <span class="modelo-3d-pill">3D</span>
+                <span id="modelo3dActualTexto" class="text-muted"></span>
+            </div>
+            <div class="form-group">
+                <label for="archivo3d">Archivo GLB</label>
+                <input type="file" id="archivo3d" name="archivo" accept=".glb,model/gltf-binary" required>
+                <small class="form-hint">
+                    Formato glTF binario (.glb), hasta {{ max_3d_size_mb|default(25) }} MB.
+                </small>
+            </div>
+            <div id="modelo3dError" class="alert alert-error" role="alert" hidden></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-danger" id="btnQuitar3d" hidden>Quitar 3D</button>
+                <button type="button" class="btn btn-secondary" id="cancelarModelo3d">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnSubir3d">Subir modelo</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
+<script type="module" src="/static/vendor/model-viewer.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // ===== SIDEBAR / THEME (reutiliza base style, agregar mínimos) =====
@@ -371,24 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', handleResize);
     handleResize();
 
-    // ===== THEME TOGGLE (base) =====
-    const themeToggle = document.getElementById('theme-toggle');
-    const html = document.documentElement;
-    if (themeToggle) {
-        const updateThemeIcon = (theme) => {
-            themeToggle.textContent = theme === 'dark' ? '☀' : '☾';
-            themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
-        };
-        const currentTheme = html.getAttribute('data-theme') || 'light';
-        updateThemeIcon(currentTheme);
-        themeToggle.addEventListener('click', function() {
-            const current = html.getAttribute('data-theme');
-            const next = current === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-            updateThemeIcon(next);
-        });
-    }
+    // El tema lo gestiona base.html (evita listeners duplicados).
 
     // ===== MODAL CRUD MODELOS =====
     const modeloModal = document.getElementById('modeloModal');
@@ -544,6 +655,230 @@ document.addEventListener('DOMContentLoaded', function() {
             btnGuardar.disabled = false;
             btnGuardar.textContent = 'Guardar';
         }
+    });
+
+    // ===== FILTROS: evita enviar campos vacíos (el servidor también los normaliza) =====
+    const filtrosForm = document.querySelector('.filtros-form');
+    if (filtrosForm) {
+        filtrosForm.addEventListener('submit', function() {
+            filtrosForm.querySelectorAll('input, select').forEach(function(el) {
+                if (!el.value.trim()) {
+                    el.disabled = true;
+                }
+            });
+        });
+
+        // Al volver con el botón "atrás", el navegador puede restaurar el formulario
+        // con los campos deshabilitados: se reactivan para poder editar de nuevo.
+        window.addEventListener('pageshow', function() {
+            filtrosForm.querySelectorAll('input[disabled], select[disabled]').forEach(function(el) {
+                el.disabled = false;
+            });
+        });
+    }
+
+    // ===== VISOR 3D =====
+    const viewerModal = document.getElementById('viewer3dModal');
+    const viewer = document.getElementById('modelViewer3d');
+    const viewerTitle = document.getElementById('viewer3dTitle');
+    const viewerLoading = document.getElementById('viewer3dLoading');
+    const viewerError = document.getElementById('viewer3dError');
+    const cerrarViewer = document.getElementById('cerrarViewer3d');
+
+    function abrirViewer3d(src, nombre) {
+        if (!viewerModal || !viewer) return;
+        viewerError.hidden = true;
+        viewerLoading.hidden = false;
+        viewerTitle.textContent = nombre ? nombre + ' · 3D' : 'Vista 3D';
+        viewer.setAttribute('alt', nombre ? 'Modelo 3D de ' + nombre : 'Modelo 3D del auto');
+        viewerModal.classList.add('visible');
+        viewerModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        viewer.removeAttribute('src');
+        requestAnimationFrame(function() {
+            viewer.setAttribute('src', src);
+        });
+    }
+
+    function cerrarViewer3d() {
+        if (!viewerModal) return;
+        viewerModal.classList.remove('visible');
+        viewerModal.setAttribute('aria-hidden', 'true');
+        if (viewer) viewer.removeAttribute('src');
+        if (viewerLoading) viewerLoading.hidden = true;
+        document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('.btn-ver-3d').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            abrirViewer3d(this.dataset.src, this.dataset.nombre);
+        });
+    });
+
+    if (viewer) {
+        viewer.addEventListener('load', function() {
+            viewerLoading.hidden = true;
+            viewerError.hidden = true;
+        });
+        viewer.addEventListener('error', function() {
+            viewerLoading.hidden = true;
+            viewerError.hidden = false;
+        });
+    }
+    if (cerrarViewer) cerrarViewer.addEventListener('click', cerrarViewer3d);
+    if (viewerModal) {
+        viewerModal.addEventListener('click', function(e) {
+            if (e.target === viewerModal) cerrarViewer3d();
+        });
+    }
+
+    // ===== GESTIÓN 3D (ADMIN) =====
+    const modelo3dModal = document.getElementById('modelo3dModal');
+    const modelo3dForm = document.getElementById('modelo3dForm');
+    const modelo3dIdInput = document.getElementById('modelo3dId');
+    const modelo3dError = document.getElementById('modelo3dError');
+    const modelo3dActual = document.getElementById('modelo3dActual');
+    const modelo3dActualTexto = document.getElementById('modelo3dActualTexto');
+    const archivo3d = document.getElementById('archivo3d');
+    const btnQuitar3d = document.getElementById('btnQuitar3d');
+    const btnSubir3d = document.getElementById('btnSubir3d');
+    const cerrarModelo3d = document.getElementById('cerrarModelo3d');
+    const cancelarModelo3d = document.getElementById('cancelarModelo3d');
+    const max3dBytes = {{ max_3d_size_mb|default(25) }} * 1024 * 1024;
+
+    function mostrarError3d(mensaje) {
+        modelo3dError.textContent = mensaje;
+        modelo3dError.hidden = false;
+    }
+
+    function actualizarEstado3d(data) {
+        if (data && data.modelo_3d_url) {
+            const tamano = data.modelo_3d_tamano
+                ? Math.max(1, Math.round(data.modelo_3d_tamano / 1024)) + ' KB'
+                : '';
+            modelo3dActual.hidden = false;
+            modelo3dActualTexto.textContent = [String(data.modelo_3d_formato || 'GLB').toUpperCase(), tamano]
+                .filter(Boolean)
+                .join(' · ');
+            btnQuitar3d.hidden = false;
+        } else {
+            modelo3dActual.hidden = true;
+            modelo3dActualTexto.textContent = '';
+            btnQuitar3d.hidden = true;
+        }
+    }
+
+    function cerrarModelo3dFn() {
+        if (!modelo3dModal) return;
+        modelo3dModal.classList.remove('visible');
+        modelo3dModal.setAttribute('aria-hidden', 'true');
+        modelo3dForm.reset();
+        modelo3dError.hidden = true;
+        modelo3dError.textContent = '';
+        modelo3dIdInput.value = '';
+        btnSubir3d.disabled = false;
+        btnSubir3d.textContent = 'Subir modelo';
+        btnQuitar3d.disabled = false;
+        document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('.btn-gestionar-3d').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            try {
+                const res = await fetch('/modelos/api/' + id);
+                if (!res.ok) throw new Error('No se pudo cargar el modelo');
+                const data = await res.json();
+                modelo3dForm.reset();
+                modelo3dIdInput.value = id;
+                modelo3dError.hidden = true;
+                modelo3dError.textContent = '';
+                actualizarEstado3d(data);
+                modelo3dModal.classList.add('visible');
+                modelo3dModal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+                archivo3d.focus();
+            } catch (err) {
+                alert(err.message || 'Error al cargar el modelo');
+            }
+        });
+    });
+
+    if (cerrarModelo3d) cerrarModelo3d.addEventListener('click', cerrarModelo3dFn);
+    if (cancelarModelo3d) cancelarModelo3d.addEventListener('click', cerrarModelo3dFn);
+    if (modelo3dModal) {
+        modelo3dModal.addEventListener('click', function(e) {
+            if (e.target === modelo3dModal) cerrarModelo3dFn();
+        });
+    }
+
+    if (modelo3dForm) {
+        modelo3dForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            modelo3dError.hidden = true;
+            const file = archivo3d.files && archivo3d.files[0];
+            if (!file) {
+                mostrarError3d('Selecciona un archivo GLB.');
+                return;
+            }
+            if (!file.name.toLowerCase().endsWith('.glb')) {
+                mostrarError3d('El archivo debe tener extensión .glb.');
+                return;
+            }
+            if (file.size > max3dBytes) {
+                mostrarError3d('El archivo supera el límite de {{ max_3d_size_mb|default(25) }} MB.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('archivo', file);
+            btnSubir3d.disabled = true;
+            btnSubir3d.textContent = 'Subiendo...';
+
+            try {
+                const res = await fetch('/modelos/api/' + modelo3dIdInput.value + '/3d', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(function() { return { detail: 'Error al subir el modelo 3D' }; });
+                    const detalle = typeof err.detail === 'string' ? err.detail : 'Error al subir el modelo 3D';
+                    throw new Error(detalle);
+                }
+                window.location.reload();
+            } catch (err) {
+                mostrarError3d(err.message || 'Error de conexión');
+            } finally {
+                btnSubir3d.disabled = false;
+                btnSubir3d.textContent = 'Subir modelo';
+            }
+        });
+    }
+
+    if (btnQuitar3d) {
+        btnQuitar3d.addEventListener('click', async function() {
+            if (!confirm('¿Quitar el modelo 3D de este auto?')) return;
+            btnQuitar3d.disabled = true;
+            try {
+                const res = await fetch('/modelos/api/' + modelo3dIdInput.value + '/3d', {
+                    method: 'DELETE'
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(function() { return { detail: 'Error al quitar el modelo 3D' }; });
+                    throw new Error(typeof err.detail === 'string' ? err.detail : 'Error al quitar el modelo 3D');
+                }
+                window.location.reload();
+            } catch (err) {
+                mostrarError3d(err.message || 'Error de conexión');
+                btnQuitar3d.disabled = false;
+            }
+        });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        if (viewerModal && viewerModal.classList.contains('visible')) cerrarViewer3d();
+        if (modelo3dModal && modelo3dModal.classList.contains('visible')) cerrarModelo3dFn();
     });
 });
 </script>

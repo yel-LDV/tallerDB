@@ -20,8 +20,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Cambiar propietario
-RUN chown -R appuser:appuser /app /opt/venv
+# Cambiar propietario y preparar volúmenes de datos
+RUN mkdir -p /app/data /app/uploads && \
+    chown -R appuser:appuser /app /opt/venv /app/data /app/uploads
 
 USER appuser
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# start.sh - Levanta el proyecto TallerDB (FastAPI + SQLite dev)
+# start.sh - Levanta el proyecto TallerDB (FastAPI + base de datos configurable)
 # Uso: ./start.sh
 
 set -euo pipefail
@@ -62,12 +62,8 @@ if [[ ! -f "$PROJECT_DIR/.env" ]]; then
     warn "¡Edita .env con tus credenciales antes de usar en producción!"
 fi
 
-# Ejecutar migraciones (SQLite dev)
-log "Ejecutando migraciones..."
-"$VENV_DIR/bin/alembic" upgrade head
-
-# Crear usuario admin si no existe
-log "Verificando usuario administrador..."
+# Crear el esquema si falta y el usuario admin si no existe
+log "Verificando esquema y usuario administrador..."
 "$VENV_PYTHON" scripts/create_admin.py
 
 # Levantar servidor en background

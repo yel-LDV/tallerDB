@@ -1,0 +1,82 @@
+services:
+  # Variante MySQL: docker compose -f docker-compose.mysql.yml up --build
+  db:
+    image: mysql:8.4
+    container_name: tallerdb-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-tallerdb}
+      MYSQL_USER: ${MYSQL_USER:-taller}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tallerpass}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3306:3306"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tallerdb-app-mysql
+    restart: unless-stopped
+    environment:
+      DATABASE_TYPE: mysql
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER:-taller}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tallerpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-tallerdb}
+      DATABASE_CONNECT_TIMEOUT: ${DATABASE_CONNECT_TIMEOUT:-10}
+      SECRET_KEY: ${SECRET_KEY:-change-this-in-production-min-32-chars}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-session}
+      SESSION_MAX_AGE_DAYS: ${SESSION_MAX_AGE_DAYS:-7}
+      APP_NAME: ${APP_NAME:-TallerDB}
+      DEBUG: ${DEBUG:-false}
+      FORCE_HTTPS: ${FORCE_HTTPS:-false}
+      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-localhost,127.0.0.1,*.tallerdb.local}"
+      UPLOADS_DIR: /app/uploads
+      MAX_3D_SIZE_MB: ${MAX_3D_SIZE_MB:-25}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@tallerdb.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+      - ./scripts:/app/scripts:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    command: >
+      sh -c "
+        python scripts/create_admin.py &&
+        exec python run.py
+      "
+
+volumes:
+  mysql_data:
+  uploads_data:

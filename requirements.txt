@@ -1,11 +1,14 @@
 fastapi==0.115.*
 uvicorn[standard]==0.32.*
 sqlalchemy==2.0.*
+aiosqlite==0.20.*
 asyncmy==0.2.*
+asyncpg==0.32.*
 pydantic>=2.14
 pydantic[email]>=2.14
 pydantic-settings==2.5.*
 passlib[bcrypt]==1.7.*
+bcrypt<4.1  # passlib 1.7 no es compatible con bcrypt >= 4.1
 jinja2==3.1.*
 python-multipart==0.0.*
 alembic==1.13.*

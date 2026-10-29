@@ -53,11 +53,17 @@ Desktop.ini
 *.sqlite3
 *.db-journal
 
+# MariaDB local (startdb.sh / stopdb.sh)
+.mariadb/
+
 # Logs
 *.log
 logs/
 server.log
 cookies*.txt
+
+# Archivos subidos (modelos 3D)
+uploads/
 
 # Runtime
 *.pid

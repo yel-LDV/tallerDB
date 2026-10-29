@@ -56,5 +56,10 @@ class ModeloOut(ModeloBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    # La URL 3D solo la gestionan los endpoints de carga/borrado de GLB.
+    modelo_3d_url: Optional[str] = None
+    modelo_3d_formato: Optional[str] = None
+    modelo_3d_tamano: Optional[int] = None
+    modelo_3d_subido_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime

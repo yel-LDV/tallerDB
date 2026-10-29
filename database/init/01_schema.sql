@@ -32,6 +32,11 @@ CREATE TABLE IF NOT EXISTS modelos (
     disponible  BOOLEAN        NOT NULL DEFAULT 1,
     descripcion  TEXT           NULL,
     imagen_url  VARCHAR(500)   NULL,
+    modelo_3d_key        VARCHAR(255) NULL,
+    modelo_3d_url        VARCHAR(500) NULL,
+    modelo_3d_formato    VARCHAR(10)  NULL,
+    modelo_3d_tamano     INT          NULL,
+    modelo_3d_subido_at  DATETIME     NULL,
     created_at  DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP
                                 ON UPDATE CURRENT_TIMESTAMP,

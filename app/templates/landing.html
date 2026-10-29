@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Bienvenido - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="landing">
+    <header class="landing-header">
+        <a class="landing-brand" href="/">{{ app_name }}</a>
+        <nav class="landing-nav" aria-label="Acceso">
+            <a href="/login" class="btn btn-secondary">Iniciar sesión</a>
+            <a href="/register" class="btn btn-primary">Crear cuenta</a>
+        </nav>
+    </header>
+
+    <main class="landing-hero">
+        <div class="landing-copy">
+            <span class="landing-eyebrow">Catálogo de autos</span>
+            <h1>Encuentra tu próximo auto y explóralo en 3D</h1>
+            <p>
+                Regístrate para buscar, filtrar y comparar modelos. Los
+                administradores pueden publicar fichas completas con imágenes y
+                modelos 3D interactivos.
+            </p>
+            <div class="landing-actions">
+                <a href="/register" class="btn btn-primary btn-lg">Crear mi cuenta</a>
+                <a href="/login" class="btn btn-secondary btn-lg">Ya tengo cuenta</a>
+            </div>
+            <ul class="landing-points">
+                <li>Catálogo con búsqueda y filtros</li>
+                <li>Fichas con imagen y visor 3D</li>
+                <li>Sesión persistente y segura</li>
+            </ul>
+        </div>
+        <div class="landing-art" aria-hidden="true">
+            <div class="landing-art-card">
+                <span class="landing-art-icon">&#128663;</span>
+                <span class="landing-art-badge">3D</span>
+                <div class="landing-art-lines">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="landing-footer">
+        <span>{{ app_name }}</span>
+        <span>Catálogo y gestión de modelos</span>
+    </footer>
+</div>
+{% endblock %}

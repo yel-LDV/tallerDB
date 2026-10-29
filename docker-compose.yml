@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  # Base de datos MariaDB
+  # Base de datos MariaDB (motor por defecto).
   # Los scripts SQL de database/init/ se ejecutan automáticamente la primera
   # vez que se levanta el volumen de datos (esquema + datos de ejemplo).
   db:
@@ -40,25 +38,46 @@ services:
       MARIADB_USER: ${MARIADB_USER:-taller}
       MARIADB_PASSWORD: ${MARIADB_PASSWORD:-tallerpass}
       MARIADB_DATABASE: ${MARIADB_DATABASE:-tallerdb}
+      DATABASE_CONNECT_TIMEOUT: ${DATABASE_CONNECT_TIMEOUT:-10}
       SECRET_KEY: ${SECRET_KEY:-change-this-in-production-min-32-chars}
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-session}
+      SESSION_MAX_AGE_DAYS: ${SESSION_MAX_AGE_DAYS:-7}
       APP_NAME: ${APP_NAME:-TallerDB}
       DEBUG: ${DEBUG:-false}
+      FORCE_HTTPS: ${FORCE_HTTPS:-false}
+      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-localhost,127.0.0.1,*.tallerdb.local}"
+      UPLOADS_DIR: /app/uploads
+      MAX_3D_SIZE_MB: ${MAX_3D_SIZE_MB:-25}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@tallerdb.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - ./alembic:/app/alembic:ro
+      - uploads_data:/app/uploads
       - ./scripts:/app/scripts:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
     # El esquema y los datos iniciales los crea MariaDB con database/init/.
     # Solo se crea el usuario administrador y se levanta la app.
     command: >
       sh -c "
         python scripts/create_admin.py &&
-        python run.py
+        exec python run.py
       "
 
 volumes:
   mariadb_data:
+  uploads_data:

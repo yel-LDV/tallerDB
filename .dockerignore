@@ -15,14 +15,18 @@ __pycache__
 *~
 .DS_Store
 .env
+.env.local
+.env.*.local
 .venv
 venv
+dev.db
 *.db
 *.sqlite
 *.sqlite3
 *.pid
 *.lock
 server.log
+.mariadb
 .pytest_cache
 .mypy_cache
 .ruff_cache
@@ -42,11 +46,13 @@ htmlcov
 # Git
 .git
 .gitignore
-# Docs
+# Documentación y pruebas no necesarias en la imagen
 README.md
 *.md
-# Scripts
-scripts/*.py
+docs
+tests
+# Archivos subidos por usuarios (se usa un volumen)
+uploads
 # Alembic (se copia en compose)
 alembic/versions/*
 !alembic/versions/.gitkeep

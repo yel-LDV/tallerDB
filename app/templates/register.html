@@ -4,34 +4,96 @@
 
 {% block content %}
 <div class="auth-container">
-    <div class="auth-card">
+    <div class="auth-card auth-card-register">
         <header class="auth-header">
-            <h1>{{ app_name }}</h1>
-            <p>Crea tu cuenta</p>
+            <a class="auth-brand" href="/">{{ app_name }}</a>
+            <h1>Crea tu cuenta</h1>
+            <p>Regístrate para explorar el catálogo y sus modelos 3D.</p>
         </header>
 
         {% if error %}
-        <div class="alert alert-error">{{ error }}</div>
+        <div class="alert alert-error" role="alert">{{ error }}</div>
         {% endif %}
 
-        <form method="post" action="/register" class="auth-form" novalidate>
-            <div class="form-group">
+        <form method="post" action="/register" class="auth-form" id="registerForm" novalidate>
+            <div class="form-group {% if field_errors.get('email') %}has-error{% endif %}">
                 <label for="email">Email</label>
-                <input type="email" id="email" name="email" required autocomplete="email" autofocus>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value="{{ email }}"
+                    required
+                    maxlength="255"
+                    autocomplete="email"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    placeholder="tu@email.com"
+                    aria-describedby="email-hint{% if field_errors.get('email') %} email-error{% endif %}"
+                    {% if field_errors.get('email') %}aria-invalid="true"{% endif %}
+                    autofocus
+                >
+                <small class="form-hint" id="email-hint">Lo usaremos para iniciar sesión.</small>
+                {% if field_errors.get('email') %}
+                <p class="form-error" id="email-error">{{ field_errors.get('email') }}</p>
+                {% endif %}
             </div>
 
-            <div class="form-group">
+            <div class="form-group {% if field_errors.get('password') %}has-error{% endif %}">
                 <label for="password">Contraseña</label>
-                <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
-                <small class="form-hint">Mínimo 8 caracteres</small>
+                <div class="password-field">
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        placeholder="Crea una contraseña"
+                        aria-describedby="password-hint password-strength{% if field_errors.get('password') %} password-error{% endif %}"
+                        {% if field_errors.get('password') %}aria-invalid="true"{% endif %}
+                    >
+                    <button type="button" class="password-toggle" data-target="password" aria-label="Mostrar contraseña" aria-pressed="false">
+                        <span aria-hidden="true">&#128065;</span>
+                    </button>
+                </div>
+                <div class="password-strength" id="password-strength" aria-live="polite">
+                    <div class="strength-track"><span class="strength-fill"></span></div>
+                    <span class="strength-label">Mínimo 8 caracteres</span>
+                </div>
+                <small class="form-hint" id="password-hint">Máximo 72 bytes; evita reutilizar contraseñas.</small>
+                {% if field_errors.get('password') %}
+                <p class="form-error" id="password-error">{{ field_errors.get('password') }}</p>
+                {% endif %}
             </div>
 
-            <div class="form-group">
+            <div class="form-group {% if field_errors.get('confirm_password') %}has-error{% endif %}">
                 <label for="confirm_password">Confirmar contraseña</label>
-                <input type="password" id="confirm_password" name="confirm_password" required autocomplete="new-password">
+                <div class="password-field">
+                    <input
+                        type="password"
+                        id="confirm_password"
+                        name="confirm_password"
+                        required
+                        autocomplete="new-password"
+                        placeholder="Repite la contraseña"
+                        aria-describedby="password-match{% if field_errors.get('confirm_password') %} confirm-password-error{% endif %}"
+                        {% if field_errors.get('confirm_password') %}aria-invalid="true"{% endif %}
+                    >
+                    <button type="button" class="password-toggle" data-target="confirm_password" aria-label="Mostrar contraseña" aria-pressed="false">
+                        <span aria-hidden="true">&#128065;</span>
+                    </button>
+                </div>
+                <small class="form-hint password-match" id="password-match" aria-live="polite"></small>
+                {% if field_errors.get('confirm_password') %}
+                <p class="form-error" id="confirm-password-error">{{ field_errors.get('confirm_password') }}</p>
+                {% endif %}
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block">Crear cuenta</button>
+            <button type="submit" class="btn btn-primary btn-block" id="btn-register">
+                Crear cuenta
+            </button>
         </form>
 
         <footer class="auth-footer">
@@ -39,4 +101,93 @@
         </footer>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('registerForm');
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+    const strengthFill = document.querySelector('#password-strength .strength-fill');
+    const strengthLabel = document.querySelector('#password-strength .strength-label');
+    const matchHint = document.getElementById('password-match');
+    const submitButton = document.getElementById('btn-register');
+
+    document.querySelectorAll('.password-toggle').forEach(function (button) {
+        button.addEventListener('click', function () {
+            const input = document.getElementById(button.dataset.target);
+            if (!input) return;
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            button.setAttribute('aria-pressed', show ? 'true' : 'false');
+            button.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+            input.focus();
+        });
+    });
+
+    function strengthFor(value) {
+        if (!value) return { score: 0, label: 'Mínimo 8 caracteres' };
+        let score = 0;
+        if (value.length >= 8) score += 1;
+        if (value.length >= 12) score += 1;
+        if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
+        if (/\d/.test(value)) score += 1;
+        if (/[^A-Za-z0-9]/.test(value)) score += 1;
+        if (new TextEncoder().encode(value).length > 72) {
+            return { score: 1, label: 'Demasiado larga (máx. 72 bytes)' };
+        }
+        const labels = ['Muy débil', 'Débil', 'Aceptable', 'Buena', 'Fuerte'];
+        return { score: Math.min(score, 4), label: labels[Math.min(score, 4)] };
+    }
+
+    function updateStrength() {
+        const result = strengthFor(password.value);
+        if (strengthFill) strengthFill.dataset.score = String(result.score);
+        if (strengthLabel) strengthLabel.textContent = result.label;
+    }
+
+    function updateMatch() {
+        if (!matchHint) return;
+        if (!confirmPassword.value) {
+            matchHint.textContent = '';
+            matchHint.className = 'form-hint password-match';
+            return;
+        }
+        const matches = password.value === confirmPassword.value;
+        matchHint.textContent = matches ? 'Las contraseñas coinciden.' : 'Las contraseñas no coinciden.';
+        matchHint.className = 'form-hint password-match ' + (matches ? 'is-match' : 'is-mismatch');
+        confirmPassword.setAttribute('aria-invalid', matches ? 'false' : 'true');
+    }
+
+    if (password) password.addEventListener('input', function () {
+        updateStrength();
+        updateMatch();
+    });
+    if (confirmPassword) confirmPassword.addEventListener('input', updateMatch);
+
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            if (password.value !== confirmPassword.value) {
+                event.preventDefault();
+                updateMatch();
+                confirmPassword.focus();
+                return;
+            }
+            if (new TextEncoder().encode(password.value).length > 72) {
+                event.preventDefault();
+                if (strengthLabel) strengthLabel.textContent = 'Demasiado larga (máx. 72 bytes)';
+                password.focus();
+                return;
+            }
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Creando cuenta...';
+            }
+        });
+    }
+
+    updateStrength();
+});
+</script>
 {% endblock %}

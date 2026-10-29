@@ -40,6 +40,17 @@ class Modelo(Base):
     disponible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     descripcion: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     imagen_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    # Modelo 3D (GLB). ``modelo_3d_key`` es el nombre interno en disco y
+    # ``modelo_3d_url`` la URL pública que consume el visor.
+    modelo_3d_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    modelo_3d_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    modelo_3d_formato: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    modelo_3d_tamano: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    modelo_3d_subido_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

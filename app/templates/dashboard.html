@@ -57,6 +57,11 @@
         </header>
 
         <main class="main-content" id="main-content">
+            {% if request.query_params.get('bienvenido') == '1' %}
+            <div class="alert alert-success" role="status">
+                Tu cuenta se creó correctamente. ¡Bienvenido a {{ app_name }}!
+            </div>
+            {% endif %}
             <section id="section-dashboard" class="content-section active">
                 <div class="card">
                     <h2>Bienvenido, {{ user.email }}</h2>
@@ -336,32 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSection('section-' + hash);
     }
 
-    // ===== THEME TOGGLE =====
-    const themeToggle = document.getElementById('theme-toggle');
-    const html = document.documentElement;
-    const updateThemeIcon = (theme) => {
-        themeToggle.textContent = theme === 'dark' ? '☀' : '☾';
-        themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
-    };
-
-    const currentTheme = html.getAttribute('data-theme') || 'light';
-    updateThemeIcon(currentTheme);
-
-    themeToggle.addEventListener('click', function() {
-        const current = html.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        html.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-        updateThemeIcon(next);
-    });
-
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-        if (localStorage.getItem('theme') === 'system') {
-            const next = e.matches ? 'dark' : 'light';
-            html.setAttribute('data-theme', next);
-            updateThemeIcon(next);
-        }
-    });
+    // El tema lo gestiona base.html (evita listeners duplicados).
 
     // ===== ADMIN: PASSWORD TOGGLE =====
     document.querySelectorAll('.toggle-password').forEach(btn => {

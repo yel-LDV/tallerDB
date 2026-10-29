@@ -30,7 +30,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copiar virtualenv del builder
 COPY --from=builder /opt/venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
 # Crear usuario no-root
 RUN useradd --no-create-home --shell /bin/bash appuser
@@ -40,17 +42,18 @@ WORKDIR /app
 # Copiar código
 COPY --chown=appuser:appuser . .
 
-# Crear directorio para BD SQLite (solo dev)
-RUN mkdir -p /app/data && chown appuser:appuser /app/data
+# Directorios de datos: SQLite (dev) y modelos 3D subidos
+RUN mkdir -p /app/data /app/uploads && \
+    chown -R appuser:appuser /app/data /app/uploads
 
 USER appuser
 
 # Exponer puerto
 EXPOSE 8000
 
-# Health check
+# Health check (readiness: comprueba también la base de datos)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/login', timeout=2)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=2)" || exit 1
 
 # Comando por defecto
 CMD ["python", "run.py"]

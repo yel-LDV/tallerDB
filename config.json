@@ -4,12 +4,15 @@
     "host": "0.0.0.0",
     "port": 8000,
     "debug": true,
+    "force_https": false,
+    "allowed_hosts": "localhost,127.0.0.1,*.tallerdb.local",
     "secret_key": "",
     "session_cookie_name": "session",
     "session_max_age_days": 7
   },
   "database": {
-    "type": "sqlite",
+    "type": "mariadb",
+    "connect_timeout": 5,
     "sqlite": {
       "path": "./dev.db"
     },
@@ -22,13 +25,25 @@
       "charset": "utf8mb4"
     },
     "mariadb": {
-      "host": "localhost",
+      "host": "127.0.0.1",
       "port": 3306,
       "user": "taller",
       "password": "tallerpass",
       "database": "tallerdb",
       "charset": "utf8mb4"
+    },
+    "postgresql": {
+      "host": "localhost",
+      "port": 5432,
+      "user": "taller",
+      "password": "tallerpass",
+      "database": "tallerdb",
+      "sslmode": ""
     }
+  },
+  "uploads": {
+    "dir": "./uploads",
+    "max_3d_size_mb": 25
   },
   "security": {
     "bcrypt_rounds": 12,
