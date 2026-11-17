@@ -8,7 +8,7 @@
 --  Nota: incluye una prueba negativa (violación de UNIQUE) a
 --        propósito; por eso se debe ejecutar con la opción --force
 --        para que el cliente continúe tras ese error esperado.
---  Uso: mariadb -u taller -ptallerpass --force tallerdb < database/pruebas_crud.sql
+--  Uso: mariadb -u taller -p --force tallerdb < database/pruebas_crud.sql
 -- ============================================================
 
 USE tallerdb;

@@ -1,5 +1,10 @@
 # TallerDB — Catálogo de Autos (categoría «Modelos»)
 
+> **Documento histórico.** Este informe corresponde a una entrega anterior
+> (evidencia de la categoría «Modelos»). El informe vigente de la Actividad 4.4,
+> con los Temas 1–4, transacciones y correcciones de datos, está en
+> [`docs/INFORME_AVANCE_4.4.md`](INFORME_AVANCE_4.4.md).
+
 **Informe de evidencia — Aplicación web con base de datos MariaDB**
 
 ---
@@ -84,14 +89,14 @@ DATABASE_TYPE=mariadb
 MARIADB_HOST=127.0.0.1
 MARIADB_PORT=3306
 MARIADB_USER=taller
-MARIADB_PASSWORD=tallerpass
+MARIADB_PASSWORD=***
 MARIADB_DATABASE=tallerdb
 ```
 
 Resultado de la construcción de la URL (verificado):
 
 ```
-mysql+asyncmy://taller:tallerpass@127.0.0.1:3307/tallerdb?charset=utf8mb4
+mysql+asyncmy://taller:***@127.0.0.1:3307/tallerdb?charset=utf8mb4
 ```
 
 La entidad `Modelo` (tabla `modelos`) es creada por Alembic y también por los scripts SQL descritos en el apartado 3.4.

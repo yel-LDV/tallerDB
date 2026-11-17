@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Mi perfil · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Menú principal">
+        <div class="sidebar-header">
+            <h2>{{ app_name }}</h2>
+            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Alternar menú" aria-expanded="true">
+                <span class="toggle-icon">&#9776;</span>
+            </button>
+        </div>
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/dashboard" class="nav-link">
+                        <span class="nav-icon">&#128279;</span>
+                        <span class="nav-text">Panel</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/modelos" class="nav-link">
+                        <span class="nav-icon">&#128663;</span>
+                        <span class="nav-text">Modelos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/profile" class="nav-link active">
+                        <span class="nav-icon">&#128100;</span>
+                        <span class="nav-text">Mi perfil</span>
+                    </a>
+                </li>
+                {% if user.is_admin %}
+                <li class="nav-divider"></li>
+                <li class="nav-section">Administración</li>
+                <li class="nav-item">
+                    <a href="/dashboard#users" class="nav-link">
+                        <span class="nav-icon">&#128101;</span>
+                        <span class="nav-text">Usuarios</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        <div class="sidebar-footer">
+            <form method="post" action="/logout" style="width: 100%;">
+                <button type="submit" class="btn btn-secondary btn-block">Cerrar sesión</button>
+            </form>
+        </div>
+    </aside>
+
+    <div class="main-wrapper">
+        <header class="top-header">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Abrir menú" aria-expanded="false">
+                <span class="toggle-icon">&#9776;</span>
+            </button>
+            <h1>{{ app_name }} · Mi perfil</h1>
+            <div class="header-actions">
+                <span class="user-badge {% if user.is_admin %}badge-admin{% else %}badge-user{% endif %}">
+                    {% if user.is_admin %}Admin{% else %}Usuario{% endif %}
+                </span>
+                <button id="theme-toggle" class="btn btn-icon" aria-label="Cambiar tema"></button>
+            </div>
+        </header>
+
+        <main class="main-content" id="main-content">
+            {% if ok %}
+            <div class="alert alert-success" role="status">
+                Tu contraseña se actualizó correctamente.
+            </div>
+            {% endif %}
+
+            {% if error %}
+            <div class="alert alert-error" role="alert">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <section class="content-section active">
+                <div class="card">
+                    <h2>Información de la cuenta</h2>
+                    <dl class="user-info">
+                        <dt>ID</dt>
+                        <dd>{{ user.id }}</dd>
+                        <dt>Email</dt>
+                        <dd>{{ user.email }}</dd>
+                        <dt>Tipo</dt>
+                        <dd>
+                            <span class="badge {% if user.is_admin %}badge-admin{% else %}badge-user{% endif %}">
+                                {% if user.is_admin %}Administrador{% else %}Usuario estándar{% endif %}
+                            </span>
+                        </dd>
+                        <dt>Estado</dt>
+                        <dd><span class="badge badge-success">Activo</span></dd>
+                        <dt>Registrado</dt>
+                        <dd>{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}</dd>
+                    </dl>
+                </div>
+
+                <div class="card">
+                    <h2>Cambiar contraseña</h2>
+                    <p class="text-muted">
+                        Introduce tu contraseña actual y la nueva. Debe tener entre 8 y 72 bytes.
+                    </p>
+                    <form method="post" action="/profile/password" class="profile-form">
+                        <div class="form-group">
+                            <label for="current-password">Contraseña actual</label>
+                            <input type="password" id="current-password" name="current_password"
+                                   required autocomplete="current-password">
+                        </div>
+                        <div class="form-group">
+                            <label for="new-password">Nueva contraseña</label>
+                            <input type="password" id="new-password" name="new_password"
+                                   required minlength="8" autocomplete="new-password">
+                            <small class="form-hint">Mínimo 8 caracteres.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-password">Confirmar nueva contraseña</label>
+                            <input type="password" id="confirm-password" name="confirm_password"
+                                   required minlength="8" autocomplete="new-password">
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Actualizar contraseña</button>
+                            <a href="/modelos" class="btn btn-secondary">Volver al catálogo</a>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+    function toggleSidebar(collapsed) {
+        if (collapsed === undefined) {
+            collapsed = sidebar.classList.contains('collapsed');
+        }
+        if (collapsed) {
+            sidebar.classList.remove('collapsed');
+            sidebarToggle.setAttribute('aria-expanded', 'true');
+        } else {
+            sidebar.classList.add('collapsed');
+            sidebarToggle.setAttribute('aria-expanded', 'false');
+        }
+        localStorage.setItem('sidebarCollapsed', collapsed ? 'false' : 'true');
+    }
+
+    function toggleMobileMenu(open) {
+        if (open === undefined) {
+            open = sidebar.classList.contains('mobile-open');
+        }
+        if (open) {
+            sidebar.classList.add('mobile-open');
+            sidebarOverlay.classList.add('visible');
+            mobileMenuToggle.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        } else {
+            sidebar.classList.remove('mobile-open');
+            sidebarOverlay.classList.remove('visible');
+            mobileMenuToggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        }
+    }
+
+    if (sidebarToggle) sidebarToggle.addEventListener('click', function() { toggleSidebar(); });
+    if (mobileMenuToggle) mobileMenuToggle.addEventListener('click', function() { toggleMobileMenu(); });
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', function() { toggleMobileMenu(false); });
+
+    const savedCollapsed = localStorage.getItem('sidebarCollapsed');
+    if (savedCollapsed === 'true') toggleSidebar(true);
+
+    function handleResize() {
+        if (window.innerWidth < 768) {
+            sidebar.classList.remove('collapsed');
+        } else {
+            sidebar.classList.remove('mobile-open');
+            sidebarOverlay.classList.remove('visible');
+            document.body.style.overflow = '';
+        }
+    }
+    window.addEventListener('resize', handleResize);
+    handleResize();
+});
+</script>
+{% endblock %}

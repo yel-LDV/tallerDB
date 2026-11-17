@@ -44,6 +44,10 @@ app = FastAPI(
     title=settings.app_name,
     description="TallerDB - Sistema de catálogo de autos (Modelos)",
     lifespan=lifespan,
+    # Swagger/OpenAPI solo en desarrollo; en producción queda deshabilitado.
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
+    openapi_url="/openapi.json" if settings.debug else None,
 )
 
 # Security middleware (order matters!)

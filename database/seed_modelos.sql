@@ -2,7 +2,7 @@
 --  TallerDB — Datos iniciales del catálogo de autos
 --  Archivo: database/seed_modelos.sql
 --  Descripción: inserta modelos de ejemplo en la tabla `modelos`.
---  Uso: mariadb -u taller -ptallerpass tallerdb < database/seed_modelos.sql
+--  Uso: mariadb -u taller -p tallerdb < database/seed_modelos.sql
 -- ============================================================
 
 USE tallerdb;

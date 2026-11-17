@@ -13,6 +13,9 @@ si el motor configurado no responde, la aplicación **no arranca** (fail-fast).
 - **Administración**: usuario admin por defecto (`admin@tallerdb.local` /
   `admin123`), creación de más administradores y gestión de usuarios desde el
   panel.
+- **Mi perfil**: cada usuario consulta sus datos y cambia su contraseña.
+- **Interfaz por roles**: cada usuario ve solo las acciones que puede ejecutar;
+  no se muestran botones bloqueados.
 - **Catálogo «Modelos»** con galería, búsqueda, filtros por marca/tipo/año/
   disponibilidad, ordenamiento, estadísticas y paginación.
 - **CRUD completo** vía API REST (crear/editar/borrar requiere administrador).
@@ -65,6 +68,7 @@ tallerdbProyect/
 │   └── templates/
 │       ├── base.html / landing.html / login.html / register.html
 │       ├── dashboard.html
+│       ├── profile.html               # Datos de cuenta y cambio de contraseña
 │       └── modelos.html               # Catálogo + visor/gestión 3D
 ├── database/
 │   ├── schema_mariadb.sql             # DDL para MariaDB/MySQL
@@ -164,6 +168,8 @@ añade columnas nullable nuevas (por ejemplo las 3D) a instalaciones existentes.
 | `/login` | GET/POST | Inicio de sesión |
 | `/logout` | POST | Cerrar sesión |
 | `/dashboard` | GET | Panel protegido (requiere auth) |
+| `/profile` | GET | Mi perfil: datos de la cuenta (requiere auth) |
+| `/profile/password` | POST | Cambiar la contraseña propia (requiere auth) |
 | `/health` | GET | Liveness del proceso |
 | `/ready` | GET | Readiness: comprueba la base de datos |
 | **`/modelos`** | **GET** | **Catálogo con búsqueda, filtros y paginación** |
@@ -175,10 +181,16 @@ añade columnas nullable nuevas (por ejemplo las 3D) a instalaciones existentes.
 | `/admin/users/create` | POST | Crear usuario/administrador (requiere admin) |
 | `/admin/users/{id}/toggle-admin` | POST | Otorgar o quitar permisos de admin |
 | `/admin/users/{id}/toggle-active` | POST | Activar o desactivar una cuenta |
-| `/docs` | GET | Swagger UI |
+| `/docs` | GET | Swagger UI (solo con `DEBUG=true`) |
+| `/redoc` | GET | ReDoc (solo con `DEBUG=true`) |
 
 > Solo los administradores pueden crear, editar, borrar modelos y gestionar sus
 > archivos 3D. Cualquier usuario autenticado puede consultar el catálogo.
+>
+> La interfaz muestra únicamente las acciones permitidas para cada rol: un
+> usuario normal no ve botones de administración ni elementos bloqueados. La
+> autorización real siempre se valida en el backend, que responde `403` ante
+> cualquier intento directo.
 
 ## Usuario administrador
 
@@ -220,6 +232,9 @@ Desde esa misma tabla también puedes:
 - **Activar o desactivar** cuentas.
 - Ver el listado completo de usuarios registrados.
 
+> El panel de administración **no muestra los hashes de las contraseñas**. Solo
+> se listan ID, email, rol, estado y fecha de registro.
+
 Por API (con la sesión de admin):
 
 ```bash
@@ -239,6 +254,26 @@ curl -X POST http://localhost:8000/admin/users/2/toggle-admin \
 > Por seguridad, un administrador no puede quitarse sus propios permisos ni
 > desactivar su propia cuenta. El registro público (`/register`) siempre crea
 > usuarios estándar; los permisos de admin se otorgan desde el panel.
+
+## Mi perfil
+
+Todos los usuarios autenticados disponen de `/profile` (enlace **Mi perfil** en
+el menú lateral y en las acciones rápidas del panel):
+
+- Consultar ID, email, rol, estado y fecha de registro.
+- Cambiar la propia contraseña indicando la actual y la nueva.
+- La nueva contraseña debe tener entre 8 y 72 bytes y ser diferente a la actual.
+- Un usuario solo puede cambiar su propia contraseña; no hay forma de modificar
+  la de otra cuenta desde este formulario.
+
+```bash
+# Cambiar la contraseña (formulario HTML)
+curl -X POST http://localhost:8000/profile/password \
+  -H "Cookie: session=..." \
+  -d "current_password=actual" \
+  -d "new_password=nueva-clave" \
+  -d "confirm_password=nueva-clave"
+```
 
 ## Base de datos
 
@@ -290,6 +325,8 @@ el arranque con un error de validación; nunca se cae silenciosamente a SQLite.
   dominio o IP reales del despliegue.
 - `FORCE_HTTPS=true` activa la redirección a HTTPS, HSTS y cookies `Secure`;
   déjalo en `false` si TLS termina en un proxy delante de la aplicación.
+- Con `DEBUG=false` se deshabilitan `/docs`, `/redoc` y `/openapi.json`; en
+  desarrollo (`DEBUG=true`) siguen disponibles en `/docs`.
 
 ## Modelos 3D
 

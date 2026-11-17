@@ -238,6 +238,74 @@ async def dashboard(
     )
 
 
+# ===== Perfil de usuario =====
+def _render_profile(
+    request: Request,
+    user: User,
+    *,
+    error: str | None = None,
+    status_code: int = status.HTTP_200_OK,
+):
+    return templates.TemplateResponse(
+        "profile.html",
+        base_context(
+            request,
+            user=user,
+            error=error,
+            ok=request.query_params.get("ok") == "1",
+        ),
+        status_code=status_code,
+    )
+
+
+@router.get("/profile", response_class=HTMLResponse)
+async def profile(request: Request, current_user: User = Depends(require_auth)):
+    return _render_profile(request, current_user)
+
+
+@router.post("/profile/password", response_class=HTMLResponse)
+async def change_password(
+    request: Request,
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+    current_user: User = Depends(require_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cambia la contraseña del usuario autenticado."""
+
+    def error(mensaje: str, codigo: int = status.HTTP_400_BAD_REQUEST):
+        return _render_profile(
+            request, current_user, error=mensaje, status_code=codigo
+        )
+
+    if not verify_password(current_password, current_user.hashed_password):
+        return error("La contraseña actual no es correcta.")
+    if new_password != confirm_password:
+        return error("Las contraseñas nuevas no coinciden.")
+    if len(new_password) < 8:
+        return error("La nueva contraseña debe tener al menos 8 caracteres.")
+    if len(new_password.encode("utf-8")) > 72:
+        return error("La nueva contraseña no puede superar los 72 bytes.")
+    if verify_password(new_password, current_user.hashed_password):
+        return error("La nueva contraseña debe ser diferente a la actual.")
+
+    nuevo_hash = await run_in_threadpool(hash_password, new_password)
+    result = await db.execute(select(User).where(User.id == current_user.id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        return error(
+            "No se pudo actualizar la contraseña.",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    user.hashed_password = nuevo_hash
+    await db.commit()
+    return RedirectResponse(
+        url="/profile?ok=1", status_code=status.HTTP_303_SEE_OTHER
+    )
+
+
 # ===== Admin API Routes =====
 @router.post("/admin/users/create", response_class=JSONResponse)
 async def admin_create_user(

@@ -148,6 +148,18 @@ a:hover { text-decoration: underline; }
     font-size: 0.75rem;
     color: var(--color-text-muted);
 }
+.profile-form {
+    max-width: 32rem;
+    margin-top: 1rem;
+}
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+}
 
 .card {
     background-color: var(--color-surface);
@@ -477,26 +489,15 @@ a:hover { text-decoration: underline; }
     transition: all var(--transition);
     position: relative;
 }
-.quick-action:hover:not(.disabled) {
+.quick-action:hover {
     border-color: var(--color-primary);
     background-color: var(--color-primary-focus);
     color: var(--color-primary);
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
-.quick-action.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    pointer-events: none;
-}
 .quick-action .qa-icon { font-size: 2rem; }
 .quick-action .qa-text { font-weight: 500; text-align: center; }
-.quick-action .qa-lock {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    font-size: 0.875rem;
-}
 
 /* Users table */
 .table-responsive {
@@ -532,36 +533,6 @@ a:hover { text-decoration: underline; }
 .users-table td:last-child,
 .users-table th:last-child {
     width: 160px;
-}
-
-/* Password cell */
-.password-cell {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.password-hidden {
-    font-family: monospace;
-    font-size: 0.8125rem;
-    color: var(--color-text-muted);
-    letter-spacing: 0.1em;
-}
-
-.toggle-password {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all var(--transition);
-}
-.toggle-password:hover {
-    background-color: var(--color-border);
-    border-color: var(--color-primary);
 }
 
 /* Action buttons */

@@ -25,6 +25,12 @@
                         <span class="nav-text">Modelos</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="/profile" class="nav-link">
+                        <span class="nav-icon">&#128100;</span>
+                        <span class="nav-text">Mi perfil</span>
+                    </a>
+                </li>
             </ul>
         </nav>
         <div class="sidebar-footer">
@@ -297,6 +303,7 @@
 </div>
 
 <!-- Modal Crear/Editar Modelo (CRUD) -->
+{% if user.is_admin %}
 <div class="modal-overlay" id="modeloModal" role="dialog" aria-labelledby="modeloModalTitle" aria-hidden="true">
     <div class="modal" style="max-width: 620px;">
         <div class="modal-header">
@@ -372,6 +379,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 <!-- Visor 3D -->
 <div class="modal-overlay" id="viewer3dModal" role="dialog" aria-modal="true" aria-labelledby="viewer3dTitle" aria-hidden="true">
@@ -408,6 +416,7 @@
 </div>
 
 <!-- Gestión 3D (admin) -->
+{% if user.is_admin %}
 <div class="modal-overlay" id="modelo3dModal" role="dialog" aria-modal="true" aria-labelledby="modelo3dTitle" aria-hidden="true">
     <div class="modal">
         <div class="modal-header">
@@ -436,6 +445,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -501,6 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // El tema lo gestiona base.html (evita listeners duplicados).
 
+{% if user.is_admin %}
     // ===== MODAL CRUD MODELOS =====
     const modeloModal = document.getElementById('modeloModal');
     const modeloForm = document.getElementById('modeloForm');
@@ -656,6 +667,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btnGuardar.textContent = 'Guardar';
         }
     });
+{% endif %}
 
     // ===== FILTROS: evita enviar campos vacíos (el servidor también los normaliza) =====
     const filtrosForm = document.querySelector('.filtros-form');
@@ -733,6 +745,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ===== GESTIÓN 3D (ADMIN) =====
+{% if user.is_admin %}
     const modelo3dModal = document.getElementById('modelo3dModal');
     const modelo3dForm = document.getElementById('modelo3dForm');
     const modelo3dIdInput = document.getElementById('modelo3dId');
@@ -876,9 +889,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modelo3dModal && modelo3dModal.classList.contains('visible')) {
+            cerrarModelo3dFn();
+        }
+    });
+{% endif %}
+
+    document.addEventListener('keydown', function(e) {
         if (e.key !== 'Escape') return;
         if (viewerModal && viewerModal.classList.contains('visible')) cerrarViewer3d();
-        if (modelo3dModal && modelo3dModal.classList.contains('visible')) cerrarModelo3dFn();
     });
 });
 </script>
