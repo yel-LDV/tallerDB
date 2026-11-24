@@ -2,61 +2,19 @@
 
 {% block content %}
 <div class="dashboard-layout">
-    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Menú principal">
-        <div class="sidebar-header">
-            <h2>{{ app_name }}</h2>
-            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Alternar menú" aria-expanded="true">
-                <span class="toggle-icon">&#9776;</span>
-            </button>
-        </div>
-        <nav class="sidebar-nav">
-            <ul class="nav-list">
-                <li class="nav-item">
-                    <a href="#dashboard" class="nav-link active" data-section="dashboard">
-                        <span class="nav-icon">&#128279;</span>
-                        <span class="nav-text">Panel</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/modelos" class="nav-link">
-                        <span class="nav-icon">&#128663;</span>
-                        <span class="nav-text">Modelos</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/profile" class="nav-link">
-                        <span class="nav-icon">&#128100;</span>
-                        <span class="nav-text">Mi perfil</span>
-                    </a>
-                </li>
-                {% if user.is_admin %}
-                <li class="nav-divider"></li>
-                <li class="nav-section">Administración</li>
-                <li class="nav-item">
-                    <a href="#users" class="nav-link" data-section="users">
-                        <span class="nav-icon">&#128100;</span>
-                        <span class="nav-text">Usuarios</span>
-                    </a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
-        <div class="sidebar-footer">
-            <form method="post" action="/logout" style="width: 100%;">
-                <button type="submit" class="btn btn-secondary btn-block">Cerrar sesión</button>
-            </form>
-        </div>
-    </aside>
+    {% with current_page='dashboard' %}
+    {% include '_sidebar.html' %}
+    {% endwith %}
 
     <div class="main-wrapper">
         <header class="top-header">
             <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Abrir menú" aria-expanded="false">
-                <span class="toggle-icon">&#9776;</span>
+                <span class="toggle-icon"><i data-lucide="menu"></i></span>
             </button>
             <h1>{{ app_name }}</h1>
             <div class="header-actions">
                 <span class="user-badge {% if user.is_admin %}badge-admin{% else %}badge-user{% endif %}">
-                    {% if user.is_admin %}Admin{% else %}Usuario{% endif %}
+                    {% if user.is_admin %}<i data-lucide="shield" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>Admin{% else %}Usuario{% endif %}
                 </span>
                 <button id="theme-toggle" class="btn btn-icon" aria-label="Cambiar tema"></button>
             </div>
@@ -64,55 +22,173 @@
 
         <main class="main-content" id="main-content">
             {% if request.query_params.get('bienvenido') == '1' %}
-            <div class="alert alert-success" role="status">
+            <div class="alert alert-success" role="status" style="margin-bottom:1.5rem">
+                <i data-lucide="check-circle" style="width:18px;height:18px;vertical-align:middle;margin-right:0.35rem"></i>
                 Tu cuenta se creó correctamente. ¡Bienvenido a {{ app_name }}!
             </div>
             {% endif %}
+
             <section id="section-dashboard" class="content-section active">
-                <div class="card">
-                    <h2>Bienvenido, {{ user.email }}</h2>
-                    <dl class="user-info">
-                        <dt>ID</dt>
-                        <dd>{{ user.id }}</dd>
-                        <dt>Tipo</dt>
-                        <dd><span class="badge {% if user.is_admin %}badge-admin{% else %}badge-user{% endif %}">
-                            {% if user.is_admin %}Administrador{% else %}Usuario estándar{% endif %}
-                        </span></dd>
-                        <dt>Estado</dt>
-                        <dd><span class="badge badge-success">Activo</span></dd>
-                        <dt>Registrado</dt>
-                        <dd>{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}</dd>
-                    </dl>
+                <!-- Bienvenida -->
+                <div style="margin-bottom:1.5rem">
+                    <h2 style="margin:0 0 0.25rem;font-size:1.5rem">Bienvenido, {{ user.email.split('@')[0] }}</h2>
+                    <p style="margin:0;color:var(--color-text-muted)">Aquí tienes un resumen de tu actividad en la plataforma.</p>
                 </div>
 
-                <div class="card">
-                    <h3>Acciones rápidas</h3>
+                <!-- Tarjetas de estadísticas -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem">
+                    <div class="card" style="border-left:4px solid var(--color-primary)">
+                        <div style="display:flex;align-items:center;justify-content:space-between">
+                            <div>
+                                <p style="margin:0 0 0.25rem;font-size:0.8125rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Mis anuncios</p>
+                                <p style="margin:0;font-size:1.75rem;font-weight:700">{{ stats.anuncios_activos }}</p>
+                                <p style="margin:0.25rem 0 0;font-size:0.75rem;color:var(--color-text-muted)">{{ stats.total_anuncios }} publicados · {{ stats.anuncios_vendidos }} vendidos</p>
+                            </div>
+                            <i data-lucide="car" style="width:32px;height:32px;color:var(--color-primary);opacity:0.3"></i>
+                        </div>
+                    </div>
+                    <div class="card" style="border-left:4px solid #f59e0b">
+                        <div style="display:flex;align-items:center;justify-content:space-between">
+                            <div>
+                                <p style="margin:0 0 0.25rem;font-size:0.8125rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Ofertas activas</p>
+                                <p style="margin:0;font-size:1.75rem;font-weight:700">{{ stats.ofertas_pendientes }}</p>
+                                <p style="margin:0.25rem 0 0;font-size:0.75rem;color:var(--color-text-muted)">{{ stats.total_ofertas }} totales · {{ stats.ofertas_recibidas }} recibidas</p>
+                            </div>
+                            <i data-lucide="hand-coins" style="width:32px;height:32px;color:#f59e0b;opacity:0.3"></i>
+                        </div>
+                    </div>
+                    <div class="card" style="border-left:4px solid #8b5cf6">
+                        <div style="display:flex;align-items:center;justify-content:space-between">
+                            <div>
+                                <p style="margin:0 0 0.25rem;font-size:0.8125rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Mensajes</p>
+                                <p style="margin:0;font-size:1.75rem;font-weight:700">{{ stats.total_mensajes }}</p>
+                                <p style="margin:0.25rem 0 0;font-size:0.75rem;color:var(--color-text-muted)">Recibidos</p>
+                            </div>
+                            <i data-lucide="message-square" style="width:32px;height:32px;color:#8b5cf6;opacity:0.3"></i>
+                        </div>
+                    </div>
+                    <div class="card" style="border-left:4px solid var(--color-success)">
+                        <div style="display:flex;align-items:center;justify-content:space-between">
+                            <div>
+                                <p style="margin:0 0 0.25rem;font-size:0.8125rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Tratos cerrados</p>
+                                <p style="margin:0;font-size:1.75rem;font-weight:700">{{ stats.tratos_cerrados }}</p>
+                                <p style="margin:0.25rem 0 0;font-size:0.75rem;color:var(--color-text-muted)">Compras exitosas</p>
+                            </div>
+                            <i data-lucide="handshake" style="width:32px;height:32px;color:var(--color-success);opacity:0.3"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones rápidas -->
+                <div class="card" style="margin-bottom:1.5rem">
+                    <h3 style="margin:0 0 1rem"><i data-lucide="zap" style="width:18px;height:18px;vertical-align:middle;margin-right:0.35rem"></i> Acciones rápidas</h3>
                     <div class="quick-actions">
-                        <a href="/modelos" class="quick-action">
-                            <span class="qa-icon">&#128663;</span>
-                            <span class="qa-text">Ver modelos</span>
+                        <a href="/auto/" class="quick-action">
+                            <span class="qa-icon"><i data-lucide="car"></i></span>
+                            <span class="qa-text">Catálogo de autos</span>
+                        </a>
+                        <a href="/chat/" class="quick-action">
+                            <span class="qa-icon"><i data-lucide="message-square"></i></span>
+                            <span class="qa-text">Mis conversaciones</span>
+                        </a>
+                        <a href="/ofertas/" class="quick-action">
+                            <span class="qa-icon"><i data-lucide="hand-coins"></i></span>
+                            <span class="qa-text">Mis ofertas</span>
                         </a>
                         <a href="/profile" class="quick-action">
-                            <span class="qa-icon">&#128100;</span>
+                            <span class="qa-icon"><i data-lucide="user"></i></span>
                             <span class="qa-text">Mi perfil</span>
                         </a>
                         {% if user.is_admin %}
                         <a href="#users" class="quick-action" data-section="users">
-                            <span class="qa-icon">&#128101;</span>
+                            <span class="qa-icon"><i data-lucide="users"></i></span>
                             <span class="qa-text">Gestionar usuarios</span>
+                        </a>
+                        <a href="/reportes/" class="quick-action">
+                            <span class="qa-icon"><i data-lucide="flag"></i></span>
+                            <span class="qa-text">Reportes</span>
                         </a>
                         {% endif %}
                     </div>
                 </div>
+
+                <!-- Estadísticas globales para admin -->
+                {% if user.is_admin and global_stats %}
+                <div class="card" style="margin-bottom:1.5rem">
+                    <h3 style="margin:0 0 1rem"><i data-lucide="bar-chart-3" style="width:18px;height:18px;vertical-align:middle;margin-right:0.35rem"></i> Plataforma</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;text-align:center">
+                        <div>
+                            <p style="margin:0;font-size:2rem;font-weight:700;color:var(--color-primary)">{{ global_stats.total_users }}</p>
+                            <p style="margin:0.25rem 0 0;font-size:0.8125rem;color:var(--color-text-muted)">Usuarios registrados</p>
+                        </div>
+                        <div>
+                            <p style="margin:0;font-size:2rem;font-weight:700;color:var(--color-primary)">{{ global_stats.anuncios_activos }}</p>
+                            <p style="margin:0.25rem 0 0;font-size:0.8125rem;color:var(--color-text-muted)">Autos en venta</p>
+                        </div>
+                        <div>
+                            <p style="margin:0;font-size:2rem;font-weight:700;color:var(--color-primary)">{{ global_stats.total_anuncios }}</p>
+                            <p style="margin:0.25rem 0 0;font-size:0.8125rem;color:var(--color-text-muted)">Total anuncios</p>
+                        </div>
+                        <div>
+                            <p style="margin:0;font-size:2rem;font-weight:700;color:var(--color-success)">{{ global_stats.total_tratos }}</p>
+                            <p style="margin:0.25rem 0 0;font-size:0.8125rem;color:var(--color-text-muted)">Tratos cerrados</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Anuncios recientes del usuario -->
+                {% if stats.anuncios_recientes %}
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i data-lucide="clock" style="width:18px;height:18px;vertical-align:middle;margin-right:0.35rem"></i> Mis anuncios recientes</h3>
+                        <a href="/auto/" class="btn btn-secondary btn-sm">Ver todos</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Auto</th>
+                                    <th>Precio</th>
+                                    <th>Estado</th>
+                                    <th>Publicado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for a in stats.anuncios_recientes %}
+                                <tr>
+                                    <td>
+                                        <a href="/auto/{{ a.slug }}" style="font-weight:500">
+                                            {{ a.marca }} {{ a.nombre }} {{ a.anio }}
+                                        </a>
+                                    </td>
+                                    <td style="font-weight:600">${{ a.precio_oferta }}</td>
+                                    <td>
+                                        {% if a.estado.value == 'activo' %}
+                                        <span class="badge badge-success"><i data-lucide="check-circle" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Disponible</span>
+                                        {% elif a.estado.value == 'vendido' %}
+                                        <span class="badge badge-danger"><i data-lucide="x-circle" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Vendido</span>
+                                        {% else %}
+                                        <span class="badge">{{ a.estado.value }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ a.creado_at.strftime('%d/%m/%Y') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
             </section>
 
             {% if user.is_admin %}
             <section id="section-users" class="content-section">
                 <div class="card">
                     <div class="card-header">
-                        <h2>Gestión de Usuarios</h2>
+                        <h2><i data-lucide="users" style="width:20px;height:20px;vertical-align:middle;margin-right:0.35rem"></i> Gestión de Usuarios</h2>
                         <button type="button" class="btn btn-primary" id="btn-create-admin" data-bs-toggle="modal" data-bs-target="#createAdminModal">
-                            <span class="btn-icon">+</span> Crear Admin
+                            <i data-lucide="user-plus" style="width:16px;height:16px"></i> Crear Admin
                         </button>
                     </div>
                     <div class="table-responsive">
@@ -134,7 +210,7 @@
                                     <td>{{ u.email }}</td>
                                     <td>
                                         <span class="badge {% if u.is_admin %}badge-admin{% else %}badge-user{% endif %}">
-                                            {% if u.is_admin %}Admin{% else %}Usuario{% endif %}
+                                            {% if u.is_admin %}<i data-lucide="shield" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i>Admin{% else %}Usuario{% endif %}
                                         </span>
                                     </td>
                                     <td>
@@ -150,13 +226,13 @@
                                                     data-user-id="{{ u.id }}" 
                                                     data-is-admin="{{ u.is_admin }}"
                                                     aria-label="{% if u.is_admin %}Quitar admin{% else %}Hacer admin{% endif %}">
-                                                <span class="admin-icon">{% if u.is_admin %}&#128274;{% else %}&#128275;{% endif %}</span>
+                                                <span class="admin-icon">{% if u.is_admin %}<i data-lucide="shield-check"></i>{% else %}<i data-lucide="shield-off"></i>{% endif %}</span>
                                             </button>
                                             <button type="button" class="btn btn-icon btn-sm toggle-active" 
                                                     data-user-id="{{ u.id }}" 
                                                     data-is-active="{{ u.is_active }}"
                                                     aria-label="{% if u.is_active %}Desactivar{% else %}Activar{% endif %}">
-                                                <span class="active-icon">{% if u.is_active %}&#128274;{% else %}&#128275;{% endif %}</span>
+                                                <span class="active-icon">{% if u.is_active %}<i data-lucide="check-circle"></i>{% else %}<i data-lucide="x-circle"></i>{% endif %}</span>
                                             </button>
                                             {% else %}
                                             <span class="text-muted">(Tú)</span>
@@ -182,16 +258,16 @@
 <div class="modal-overlay" id="createAdminModal" role="dialog" aria-labelledby="modal-title" aria-hidden="true">
     <div class="modal">
         <div class="modal-header">
-            <h3 id="modal-title">Crear nuevo administrador</h3>
+            <h3 id="modal-title"><i data-lucide="user-plus" style="width:18px;height:18px;vertical-align:middle;margin-right:0.35rem"></i> Crear nuevo administrador</h3>
             <button type="button" class="modal-close" id="closeModal" aria-label="Cerrar">&times;</button>
         </div>
         <form id="createAdminForm" class="modal-body">
             <div class="form-group">
-                <label for="adminEmail">Email</label>
+                <label for="adminEmail"><i data-lucide="mail" style="width:14px;height:14px;vertical-align:middle;margin-right:0.25rem"></i> Email</label>
                 <input type="email" id="adminEmail" name="email" required autocomplete="email" autofocus>
             </div>
             <div class="form-group">
-                <label for="adminPassword">Contraseña</label>
+                <label for="adminPassword"><i data-lucide="lock" style="width:14px;height:14px;vertical-align:middle;margin-right:0.25rem"></i> Contraseña</label>
                 <input type="password" id="adminPassword" name="password" required minlength="8" autocomplete="new-password">
                 <small class="form-hint">Mínimo 8 caracteres</small>
             </div>
@@ -211,28 +287,13 @@
 {% endblock %}
 
 {% block scripts %}
+{% include '_sidebar_js.html' %}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // ===== SIDEBAR TOGGLE =====
+    // ===== SECTION NAVIGATION (dashboard internal sections) =====
     const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
-    const mainWrapper = document.querySelector('.main-wrapper');
-
-    function toggleSidebar(collapsed) {
-        if (collapsed === undefined) {
-            collapsed = sidebar.classList.contains('collapsed');
-        }
-        if (collapsed) {
-            sidebar.classList.remove('collapsed');
-            sidebarToggle.setAttribute('aria-expanded', 'true');
-        } else {
-            sidebar.classList.add('collapsed');
-            sidebarToggle.setAttribute('aria-expanded', 'false');
-        }
-        localStorage.setItem('sidebarCollapsed', collapsed ? 'false' : 'true');
-    }
 
     function toggleMobileMenu(open) {
         if (open === undefined) {
@@ -240,80 +301,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (open) {
             sidebar.classList.add('mobile-open');
-            sidebarOverlay.classList.add('visible');
-            mobileMenuToggle.setAttribute('aria-expanded', 'true');
+            if (sidebarOverlay) sidebarOverlay.classList.add('visible');
             document.body.style.overflow = 'hidden';
         } else {
             sidebar.classList.remove('mobile-open');
-            sidebarOverlay.classList.remove('visible');
-            mobileMenuToggle.setAttribute('aria-expanded', 'false');
+            if (sidebarOverlay) sidebarOverlay.classList.remove('visible');
             document.body.style.overflow = '';
         }
     }
 
-    // Desktop toggle
-    if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', function() {
-            toggleSidebar();
-        });
-    }
-
-    // Mobile toggle
-    if (mobileMenuToggle) {
-        mobileMenuToggle.addEventListener('click', function() {
-            toggleMobileMenu();
-        });
-    }
-
-    // Overlay click closes mobile menu
-    if (sidebarOverlay) {
-        sidebarOverlay.addEventListener('click', function() {
-            toggleMobileMenu(false);
-        });
-    }
-
-    // Restore sidebar state
-    const savedCollapsed = localStorage.getItem('sidebarCollapsed');
-    if (savedCollapsed === 'true') {
-        toggleSidebar(true);
-    }
-
-    // Responsive: auto-collapse on mobile, expand on desktop
-    function handleResize() {
-        if (window.innerWidth < 768) {
-            sidebar.classList.remove('collapsed');
-        } else {
-            sidebar.classList.remove('mobile-open');
-            sidebarOverlay.classList.remove('visible');
-            document.body.style.overflow = '';
-        }
-    }
-    window.addEventListener('resize', handleResize);
-    handleResize();
-
-    // ===== SECTION NAVIGATION =====
     const navLinks = document.querySelectorAll('.nav-link[data-section]');
     const contentSections = document.querySelectorAll('.content-section');
     const quickActions = document.querySelectorAll('.quick-action[data-section]');
 
     function showSection(sectionId) {
-        // Update nav links
-        navLinks.forEach(link => {
-            link.classList.toggle('active', link.dataset.section === sectionId.replace('section-', ''));
-        });
-
-        // Show/hide sections
         contentSections.forEach(section => {
             section.classList.toggle('active', section.id === sectionId);
         });
-
-        // Update URL hash
         history.replaceState(null, '', '#' + sectionId);
-
-        // Close mobile menu on navigation
-        if (window.innerWidth < 768) {
-            toggleMobileMenu(false);
-        }
+        if (window.innerWidth < 768) { toggleMobileMenu(false); }
     }
 
     navLinks.forEach(link => {
@@ -322,7 +328,6 @@ document.addEventListener('DOMContentLoaded', function() {
             showSection('section-' + this.dataset.section);
         });
     });
-
     quickActions.forEach(action => {
         action.addEventListener('click', function(e) {
             e.preventDefault();
@@ -330,13 +335,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Handle hash on load
     const hash = window.location.hash.slice(1);
     if (hash && document.getElementById('section-' + hash)) {
         showSection('section-' + hash);
     }
-
-    // El tema lo gestiona base.html (evita listeners duplicados).
 
 {% if user.is_admin %}
     // ===== ADMIN: TOGGLE ADMIN STATUS =====
@@ -345,7 +347,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const userId = this.dataset.userId;
             const isAdmin = this.dataset.isAdmin === 'true';
             const newAdmin = !isAdmin;
-            
             if (confirm('¿' + (newAdmin ? 'Otorgar' : 'Revocar') + ' permisos de administrador?')) {
                 fetch('/admin/users/' + userId + '/toggle-admin', {
                     method: 'POST',
@@ -354,11 +355,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Error: ' + (data.detail || 'No se pudo actualizar'));
-                    }
+                    if (data.success) { location.reload(); }
+                    else { alert('Error: ' + (data.detail || 'No se pudo actualizar')); }
                 })
                 .catch(() => alert('Error de conexión'));
             }
@@ -371,7 +369,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const userId = this.dataset.userId;
             const isActive = this.dataset.isActive === 'true';
             const newActive = !isActive;
-            
             if (confirm('¿' + (newActive ? 'Activar' : 'Desactivar') + ' este usuario?')) {
                 fetch('/admin/users/' + userId + '/toggle-active', {
                     method: 'POST',
@@ -380,11 +377,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Error: ' + (data.detail || 'No se pudo actualizar'));
-                    }
+                    if (data.success) { location.reload(); }
+                    else { alert('Error: ' + (data.detail || 'No se pudo actualizar')); }
                 })
                 .catch(() => alert('Error de conexión'));
             }
@@ -405,7 +399,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('adminEmail').focus();
         document.body.style.overflow = 'hidden';
     }
-
     function closeModal() {
         modal.classList.remove('visible');
         modal.setAttribute('aria-hidden', 'true');
@@ -418,77 +411,45 @@ document.addEventListener('DOMContentLoaded', function() {
     if (openModalBtn) openModalBtn.addEventListener('click', openModal);
     if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
     if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeModal);
-
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) closeModal();
-    });
-
+    modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modal.classList.contains('visible')) {
-            closeModal();
-        }
+        if (e.key === 'Escape' && modal.classList.contains('visible')) { closeModal(); }
     });
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         errorDiv.style.display = 'none';
         errorDiv.textContent = '';
-
         const formData = new FormData(form);
         const email = formData.get('email').toLowerCase().trim();
         const password = formData.get('password');
         const confirmPassword = formData.get('confirm_password');
-
         if (password !== confirmPassword) {
             errorDiv.textContent = 'Las contraseñas no coinciden';
             errorDiv.style.display = 'block';
             return;
         }
-
         if (password.length < 8) {
             errorDiv.textContent = 'La contraseña debe tener al menos 8 caracteres';
             errorDiv.style.display = 'block';
             return;
         }
-
         const submitBtn = form.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
         submitBtn.textContent = 'Creando...';
-
         try {
             const res = await fetch('/admin/users/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, is_admin: true })
             });
-
             const data = await res.json();
-
-            if (res.ok && data.success) {
-                closeModal();
-                location.reload();
-            } else {
-                errorDiv.textContent = data.detail || 'Error al crear administrador';
-                errorDiv.style.display = 'block';
-            }
-        } catch (err) {
-            errorDiv.textContent = 'Error de conexión';
-            errorDiv.style.display = 'block';
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Crear administrador';
-        }
+            if (res.ok && data.success) { closeModal(); location.reload(); }
+            else { errorDiv.textContent = data.detail || 'Error al crear administrador'; errorDiv.style.display = 'block'; }
+        } catch (err) { errorDiv.textContent = 'Error de conexión'; errorDiv.style.display = 'block'; }
+        finally { submitBtn.disabled = false; submitBtn.textContent = 'Crear administrador'; }
     });
 {% endif %}
-
-    // ===== KEYBOARD NAVIGATION =====
-    document.addEventListener('keydown', function(e) {
-        // Ctrl/Cmd + B to toggle sidebar
-        if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-            e.preventDefault();
-            toggleSidebar();
-        }
-    });
 });
 </script>
 {% endblock %}

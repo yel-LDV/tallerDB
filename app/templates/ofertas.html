@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Mis Ofertas — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+    {% with current_page='ofertas' %}
+    {% include '_sidebar.html' %}
+    {% endwith %}
+    <div class="main-wrapper">
+        <header class="top-header">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle"><i data-lucide="menu"></i></button>
+            <h1><i data-lucide="hand-coins" style="width:22px;height:22px;vertical-align:middle;margin-right:0.4rem"></i> Mis Ofertas</h1>
+            <div class="header-actions">
+                <button class="btn-icon" id="theme-toggle"></button>
+                <span class="user-badge {% if user.is_admin %}badge-admin{% else %}badge-user{% endif %}">{{ user.email }}</span>
+            </div>
+        </header>
+        <main class="main-content">
+            <!-- Ofertas como comprador -->
+            <div class="card" style="margin-bottom:1.5rem">
+                <div class="card-header"><h2>Mis ofertas (como comprador)</h2></div>
+                {% if ofertas_compra %}
+                <div class="table-responsive">
+                    <table class="users-table">
+                        <thead><tr><th>ID</th><th>Monto</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead>
+                        <tbody>
+                            {% for o in ofertas_compra %}
+                            <tr>
+                                <td>#{{ o.id }}</td>
+                                <td>${{ o.monto }}</td>
+                                <td>
+                                    {% if o.estado.value == 'pendiente' %}<span class="badge" style="background:#fef3c7;color:#92400e"><i data-lucide="clock" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Pendiente</span>
+                                    {% elif o.estado.value == 'aceptada' %}<span class="badge badge-success"><i data-lucide="check" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Aceptada</span>
+                                    {% elif o.estado.value == 'rechazada' %}<span class="badge badge-danger"><i data-lucide="x" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Rechazada</span>
+                                    {% elif o.estado.value == 'contraoferta' %}<span class="badge" style="background:#dbeafe;color:#1e40af"><i data-lucide="repeat" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Contraoferta</span>
+                                    {% elif o.estado.value == 'cancelada' %}<span class="badge" style="background:#e5e7eb;color:#374151"><i data-lucide="x-circle" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Cancelada</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ o.creado_at.strftime('%d/%m/%Y') }}</td>
+                                <td class="action-buttons">
+                                    {% if o.estado.value in ('pendiente', 'contraoferta') %}
+                                    <button class="btn btn-danger btn-sm" onclick="cancelarOferta({{ o.id }})"><i data-lucide="x-circle" style="width:14px;height:14px"></i> Cancelar</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No has enviado ofertas aún.</p>
+                {% endif %}
+            </div>
+
+            <!-- Ofertas como vendedor -->
+            <div class="card">
+                <div class="card-header"><h2>Ofertas recibidas (como vendedor)</h2></div>
+                {% if ofertas_venta %}
+                <div class="table-responsive">
+                    <table class="users-table">
+                        <thead><tr><th>Anuncio</th><th>Comprador</th><th>Monto</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <tbody>
+                            {% for anuncio, oferta in ofertas_venta %}
+                            <tr>
+                                <td>{{ anuncio.marca }} {{ anuncio.nombre }}</td>
+                                <td>Usuario #{{ oferta.comprador_id }}</td>
+                                <td>${{ oferta.monto }}</td>
+                                <td>
+                                    {% if oferta.estado.value == 'pendiente' %}<span class="badge" style="background:#fef3c7;color:#92400e"><i data-lucide="clock" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Pendiente</span>
+                                    {% elif oferta.estado.value == 'aceptada' %}<span class="badge badge-success"><i data-lucide="check" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Aceptada</span>
+                                    {% elif oferta.estado.value == 'rechazada' %}<span class="badge badge-danger"><i data-lucide="x" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Rechazada</span>
+                                    {% elif oferta.estado.value == 'contraoferta' %}<span class="badge" style="background:#dbeafe;color:#1e40af"><i data-lucide="repeat" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Contraoferta</span>
+                                    {% endif %}
+                                </td>
+                                <td class="action-buttons">
+                                    {% if oferta.estado.value in ('pendiente', 'contraoferta') %}
+                                    <button class="btn btn-primary btn-sm" onclick="responderOferta({{ oferta.id }}, 'aceptar')"><i data-lucide="check" style="width:14px;height:14px"></i> Aceptar</button>
+                                    <button class="btn btn-danger btn-sm" onclick="responderOferta({{ oferta.id }}, 'rechazar')"><i data-lucide="x" style="width:14px;height:14px"></i> Rechazar</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="responderOferta({{ oferta.id }}, 'contraoferta')"><i data-lucide="repeat" style="width:14px;height:14px"></i> Contraoferta</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No has recibido ofertas aún.</p>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+{% endblock %}
+
+{% block scripts %}
+{% include '_sidebar_js.html' %}
+
+<script>
+async function cancelarOferta(id) {
+    if (!confirm('¿Cancelar esta oferta?')) return;
+    await fetch(`/ofertas/api/${id}/cancelar`, { method: 'POST' });
+    location.reload();
+}
+async function responderOferta(id, accion) {
+    if (accion === 'contraoferta') {
+        const monto = prompt('Ingresa tu contraoferta ($):');
+        if (!monto) return;
+        await fetch(`/ofertas/api/${id}/responder`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ accion, monto })
+        });
+    } else {
+        await fetch(`/ofertas/api/${id}/responder`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ accion })
+        });
+    }
+    location.reload();
+}
+</script>
+{% endblock %}

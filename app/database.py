@@ -121,6 +121,12 @@ async def init_db() -> None:
     """Verifica la conexión y garantiza el esquema mínimo."""
     from app.models.modelo import Modelo  # noqa: F401
     from app.models.user import User  # noqa: F401
+    from app.models.anuncio import Anuncio  # noqa: F401
+    from app.models.foto import Foto  # noqa: F401
+    from app.models.mensaje import Mensaje  # noqa: F401
+    from app.models.oferta import Oferta  # noqa: F401
+    from app.models.trato import Trato  # noqa: F401
+    from app.models.reporte import Reporte  # noqa: F401
 
     try:
         await check_database_connection()

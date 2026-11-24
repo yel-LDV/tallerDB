@@ -62,6 +62,36 @@ if [[ ! -f "$PROJECT_DIR/.env" ]]; then
     warn "¡Edita .env con tus credenciales antes de usar en producción!"
 fi
 
+# Determinar tipo de base de datos
+DB_TYPE="${DATABASE_TYPE:-}"
+if [[ -z "$DB_TYPE" ]] && [[ -f "$PROJECT_DIR/.env" ]]; then
+    DB_TYPE=$(grep -E '^DATABASE_TYPE=' "$PROJECT_DIR/.env" | head -1 | cut -d'=' -f2 | tr -d '[:space:]')
+fi
+if [[ -z "$DB_TYPE" ]]; then
+    DB_TYPE=$(python3 -c "
+import json, sys
+try:
+    with open('$PROJECT_DIR/config.json') as f:
+        cfg = json.load(f)
+    print(cfg.get('database', {}).get('type', 'sqlite'))
+except Exception:
+    print('sqlite')
+" 2>/dev/null || echo "sqlite")
+fi
+
+# Iniciar base de datos local si es MariaDB/MySQL
+if [[ "$DB_TYPE" == "mariadb" || "$DB_TYPE" == "mysql" ]]; then
+    if [[ -x "$PROJECT_DIR/startdb.sh" ]]; then
+        log "Iniciando base de datos local ($DB_TYPE)..."
+        if ! "$PROJECT_DIR/startdb.sh"; then
+            error "No se pudo iniciar la base de datos. Revisa el log de MariaDB."
+            exit 1
+        fi
+    else
+        warn "startdb.sh no encontrado o no ejecutable. Asegúrate de iniciar MariaDB manualmente."
+    fi
+fi
+
 # Crear el esquema si falta y el usuario admin si no existe
 log "Verificando esquema y usuario administrador..."
 "$VENV_PYTHON" scripts/create_admin.py

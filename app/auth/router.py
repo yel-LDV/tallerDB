@@ -167,7 +167,7 @@ async def register_post(
     request.session.clear()
     request.session["user_id"] = user.id
     return RedirectResponse(
-        url="/dashboard?bienvenido=1", status_code=status.HTTP_303_SEE_OTHER
+        url="/auto/?bienvenido=1", status_code=status.HTTP_303_SEE_OTHER
     )
 
 
@@ -210,7 +210,7 @@ async def login_post(
 
     request.session.clear()
     request.session["user_id"] = user.id
-    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/auto/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/logout")
@@ -226,15 +226,114 @@ async def dashboard(
     current_user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db),
 ):
+    from app.models.anuncio import Anuncio, AnuncioEstado
+    from app.models.oferta import Oferta, OfertaEstado
+    from app.models.mensaje import Mensaje
+    from app.models.trato import Trato
+
     # Obtener todos los usuarios si es admin
     all_users = None
     if current_user.is_admin:
         result = await db.execute(select(User).order_by(User.created_at.desc()))
         all_users = result.scalars().all()
 
+    # Estadísticas del usuario
+    stats = {}
+
+    # Anuncios del usuario
+    anuncios_result = await db.execute(
+        select(func.count(Anuncio.id)).where(Anuncio.vendedor_id == current_user.id)
+    )
+    stats['total_anuncios'] = anuncios_result.scalar_one() or 0
+
+    anuncios_activos_result = await db.execute(
+        select(func.count(Anuncio.id)).where(
+            Anuncio.vendedor_id == current_user.id,
+            Anuncio.estado == AnuncioEstado.activo
+        )
+    )
+    stats['anuncios_activos'] = anuncios_activos_result.scalar_one() or 0
+
+    anuncios_vendidos_result = await db.execute(
+        select(func.count(Anuncio.id)).where(
+            Anuncio.vendedor_id == current_user.id,
+            Anuncio.estado == AnuncioEstado.vendido
+        )
+    )
+    stats['anuncios_vendidos'] = anuncios_vendidos_result.scalar_one() or 0
+
+    # Ofertas del usuario (como comprador)
+    ofertas_compra_result = await db.execute(
+        select(func.count(Oferta.id)).where(Oferta.comprador_id == current_user.id)
+    )
+    stats['total_ofertas'] = ofertas_compra_result.scalar_one() or 0
+
+    ofertas_pendientes_result = await db.execute(
+        select(func.count(Oferta.id)).where(
+            Oferta.comprador_id == current_user.id,
+            Oferta.estado == OfertaEstado.pendiente
+        )
+    )
+    stats['ofertas_pendientes'] = ofertas_pendientes_result.scalar_one() or 0
+
+    # Ofertas recibidas (como vendedor)
+    ofertas_recibidas_result = await db.execute(
+        select(func.count(Oferta.id)).join(
+            Anuncio, Oferta.anuncio_id == Anuncio.id
+        ).where(
+            Anuncio.vendedor_id == current_user.id,
+            Oferta.estado.in_([OfertaEstado.pendiente, OfertaEstado.contraoferta])
+        )
+    )
+    stats['ofertas_recibidas'] = ofertas_recibidas_result.scalar_one() or 0
+
+    # Mensajes no leídos (aproximación)
+    mensajes_result = await db.execute(
+        select(func.count(Mensaje.id)).where(Mensaje.destinatario_id == current_user.id)
+    )
+    stats['total_mensajes'] = mensajes_result.scalar_one() or 0
+
+    # Tratos cerrados
+    tratos_result = await db.execute(
+        select(func.count(Trato.id)).where(
+            (Trato.comprador_id == current_user.id) | (Trato.vendedor_id == current_user.id)
+        )
+    )
+    stats['tratos_cerrados'] = tratos_result.scalar_one() or 0
+
+    # Anuncios recientes del usuario
+    recientes_result = await db.execute(
+        select(Anuncio).where(Anuncio.vendedor_id == current_user.id)
+        .order_by(Anuncio.creado_at.desc()).limit(5)
+    )
+    stats['anuncios_recientes'] = recientes_result.scalars().all()
+
+    # Estadísticas globales para admin
+    global_stats = {}
+    if current_user.is_admin:
+        total_users_result = await db.execute(select(func.count(User.id)))
+        global_stats['total_users'] = total_users_result.scalar_one() or 0
+
+        total_anuncios_result = await db.execute(select(func.count(Anuncio.id)))
+        global_stats['total_anuncios'] = total_anuncios_result.scalar_one() or 0
+
+        total_anuncios_activos_result = await db.execute(
+            select(func.count(Anuncio.id)).where(Anuncio.estado == AnuncioEstado.activo)
+        )
+        global_stats['anuncios_activos'] = total_anuncios_activos_result.scalar_one() or 0
+
+        total_tratos_result = await db.execute(select(func.count(Trato.id)))
+        global_stats['total_tratos'] = total_tratos_result.scalar_one() or 0
+
     return templates.TemplateResponse(
         "dashboard.html",
-        base_context(request, user=current_user, all_users=all_users),
+        base_context(
+            request,
+            user=current_user,
+            all_users=all_users,
+            stats=stats,
+            global_stats=global_stats
+        ),
     )
 
 

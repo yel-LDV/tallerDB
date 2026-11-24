@@ -1,33 +1,58 @@
-# TallerDB - Catálogo de Autos (categoría «Modelos»)
+# TallerDB — Plataforma de Compraventa de Autos
 
-Aplicación **FastAPI + Jinja2 + SQLAlchemy async** con registro público de
-usuarios, catálogo de autos con búsqueda/filtros y visor de **modelos 3D**.
-La base de datos es configurable entre **SQLite, MySQL, MariaDB y PostgreSQL**;
-si el motor configurado no responde, la aplicación **no arranca** (fail-fast).
+Plataforma web **FastAPI + Jinja2 + SQLAlchemy async** para la compraventa de
+autos entre usuarios. Incluye catálogo público, chat en tiempo real, sistema de
+ofertas y negociación, galería de fotos, reportes a administradores y visor de
+modelos 3D. La base de datos es configurable entre **SQLite, MySQL, MariaDB y
+PostgreSQL**; si el motor configurado no responde, la aplicación **no arranca**
+(fail-fast).
 
 ## Características
 
+### Sistema de Compraventa
+
+- **Anuncios públicos**: cualquier usuario registrado puede publicar autos a la
+  venta con slug único (ej: `/auto/toyota-camry-2023-abc123`).
+- **Galería de fotos**: hasta 10 fotos por anuncio (JPG/PNG/WebP, máx 5MB cada
+  una) con validación de cabecera (magic bytes) para evitar código malicioso.
+- **Chat en tiempo real**: comunicación instantánea entre comprador y vendedor
+  vía WebSocket, con historial persistente en la base de datos.
+- **Ofertas y negociación**: el comprador envía mensajes antes de hacer una
+  oferta. El vendedor puede aceptar, rechazar o contraofertar. El proceso
+  continúa hasta que ambos aceptan o alguien cancela.
+- **Tratos cerrados**: cuando se acepta una oferta, se crea automáticamente un
+  trato con el monto final y el estado del anuncio cambia a "vendido".
+- **Autos vendidos visibles**: los anuncios vendidos permanecen en el catálogo
+  con badge "VENDIDO" para que cualquier usuario vea el resultado.
+- **Reportes a administradores**: cualquier usuario puede reportar a otro por
+  fraude, acoso, spam, contenido inapropiado o anuncios falsos. Solo los admins
+  pueden ver y resolver los reportes.
+
+### Autenticación y Seguridad
+
 - **Registro público** de usuarios con validación en servidor, contraseñas bcrypt
-  y sesión persistente; las cuentas quedan guardadas en la base de datos.
+  y sesión persistente.
 - **Login / logout** con sesiones HttpOnly y SameSite=Lax.
-- **Administración**: usuario admin por defecto (`admin@tallerdb.local` /
-  `admin123`), creación de más administradores y gestión de usuarios desde el
-  panel.
-- **Mi perfil**: cada usuario consulta sus datos y cambia su contraseña.
-- **Interfaz por roles**: cada usuario ve solo las acciones que puede ejecutar;
-  no se muestran botones bloqueados.
-- **Catálogo «Modelos»** con galería, búsqueda, filtros por marca/tipo/año/
-  disponibilidad, ordenamiento, estadísticas y paginación.
+- **Roles dinámicos**: cada usuario puede ser comprador y vendedor a la vez.
+- **Administración**: usuario admin por defecto, gestión de usuarios y reportes.
+- **Mi perfil**: consulta de datos y cambio de contraseña.
+- **Interfaz por roles**: cada usuario ve solo las acciones permitidas.
+
+### Catálogo y Modelos 3D
+
+- **Catálogo público** con búsqueda, filtros por marca/tipo/año/disponibilidad,
+  ordenamiento, estadísticas y paginación.
+- **Modelos 3D en formato GLB**: visor interactivo con `model-viewer`.
 - **CRUD completo** vía API REST (crear/editar/borrar requiere administrador).
-- **Modelos 3D en formato GLB**: subida desde el panel de administración,
-  visor interactivo con `model-viewer`, servido mediante endpoint autenticado.
-- **Bases de datos**: SQLite, MySQL, MariaDB y PostgreSQL con `DATABASE_URL` o
-  variables por motor. Arranque fail-fast salvo con SQLite.
-- **MariaDB local en un comando** con `./startdb.sh` y `./stopdb.sh`
-  (instancia propia en `.mariadb/`, datos persistentes).
-- **Comprobaciones CLI**: `python app/main.py testdb` valida la base de datos y
-  `python app/main.py test` ejecuta toda la suite.
-- **Dark/Light mode** (preferencia del sistema por defecto, persiste en localStorage).
+- **Dark/Light mode** con persistencia en localStorage.
+
+### Infraestructura
+
+- **Bases de datos**: SQLite, MySQL, MariaDB y PostgreSQL. Arranque fail-fast.
+- **MariaDB local** con `./startdb.sh` y `./stopdb.sh` (datos persistentes).
+- **Servidor** con `./start.sh` y `./stop.sh` (venv automático).
+- **Docker**: multi-stage, compose para 3 motores DB, health checks.
+- **Tests**: pytest con httpx cubriendo auth, CRUD, filtros, 3D, permisos y config.
 
 ## Stack
 
@@ -40,53 +65,81 @@ si el motor configurado no responde, la aplicación **no arranca** (fail-fast).
 | Auth | Starlette Sessions + bcrypt |
 | Validación | Pydantic 2 |
 | Config | pydantic-settings + `config.json` + `.env` |
+| Chat | WebSocket (FastAPI nativo) |
 | 3D | Google `<model-viewer>` (servido localmente) |
 | Tests | pytest + httpx |
 
 ## Estructura
 
 ```
-tallerdbProyect/
+tallerDB/
 ├── app/
 │   ├── config.py / config_loader.py   # Settings + URL de BD por motor
-│   ├── database.py                    # Engine async, fail-fast e init de esquema
+│   ├── database.py                    # Engine async, fail-fast, init de esquema
 │   ├── main.py                        # FastAPI app + middleware + /health, /ready + CLI
-│   ├── models/
-│   │   ├── user.py                    # Entidad User
-│   │   └── modelo.py                  # Entidad Modelo (incluye campos 3D)
-│   ├── schemas/
+│   ├── models/                        # Entidades SQLAlchemy
+│   │   ├── user.py                    # User
+│   │   ├── modelo.py                  # Modelo (catálogo original + 3D)
+│   │   ├── anuncio.py                 # Anuncio (auto a la venta)
+│   │   ├── foto.py                    # Foto del anuncio
+│   │   ├── mensaje.py                 # Mensaje entre usuarios
+│   │   ├── oferta.py                  # Oferta de compra
+│   │   ├── trato.py                   # Trato cerrado
+│   │   └── reporte.py                 # Reporte de usuario
+│   ├── schemas/                       # Esquemas Pydantic
 │   │   ├── auth.py
 │   │   └── modelo.py
-│   ├── auth/
-│   │   ├── security.py / deps.py / router.py
-│   ├── modelos/
-│   │   ├── router.py                  # Página HTML + API CRUD + endpoints 3D
+│   ├── auth/                          # Autenticación y autorización
+│   │   ├── security.py                # Hash/verify bcrypt
+│   │   ├── deps.py                    # get_current_user, require_auth, require_admin
+│   │   └── router.py                  # Login, register, dashboard, perfil, admin
+│   ├── modelos/                       # Catálogo original de modelos
+│   │   ├── router.py                  # HTML + API CRUD + 3D
 │   │   └── storage.py                 # Validación y almacenamiento de GLB
+│   ├── anuncios/                      # Sistema de compraventa — Anuncios
+│   │   ├── router.py                  # Catálogo público, CRUD, detalle, filtros
+│   │   ├── schemas.py                 # Pydantic schemas
+│   │   └── slug_generator.py          # Slugs únicos para URLs
+│   ├── fotos/                         # Galería de fotos
+│   │   ├── router.py                  # Subir, eliminar, servir fotos
+│   │   └── storage.py                 # Validación magic bytes, almacenamiento
+│   ├── ventas/                        # Ofertas y tratos
+│   │   ├── router.py                  # API de ofertas, negociación, tratos
+│   │   └── schemas.py                 # Pydantic schemas
+│   ├── chat/                          # Chat en tiempo real
+│   │   ├── router.py                  # WebSocket + API REST de mensajes
+│   │   └── websocket.py               # ConnectionManager
+│   ├── reportes/                      # Reportes a administradores
+│   │   └── router.py                  # Crear, listar, resolver reportes
 │   ├── static/
-│   │   ├── style.css
+│   │   ├── style.css                  # CSS con iconos Lucide
 │   │   └── vendor/model-viewer.min.js
-│   └── templates/
+│   └── templates/                     # Jinja2 templates
 │       ├── base.html / landing.html / login.html / register.html
-│       ├── dashboard.html
-│       ├── profile.html               # Datos de cuenta y cambio de contraseña
-│       └── modelos.html               # Catálogo + visor/gestión 3D
-├── database/
-│   ├── schema_mariadb.sql             # DDL para MariaDB/MySQL
-│   ├── schema_postgresql.sql          # DDL para PostgreSQL
-│   ├── seed_modelos.sql               # Datos de ejemplo
-│   ├── pruebas_crud.sql               # Pruebas INSERT/SELECT/UPDATE/DELETE
-│   ├── init/                          # Init automático del contenedor MariaDB/MySQL
-│   └── init_postgres/                 # Init automático del contenedor PostgreSQL
-├── docs/INFORME_EVIDENCIA.md
-├── alembic/                           # Migraciones manuales opcionales
-├── tests/                             # Pruebas (auth, filtros, 3D, configuración)
-├── docker-compose.yml                 # App + MariaDB (por defecto)
+│       ├── dashboard.html             # Panel con estadísticas
+│       ├── profile.html               # Mi perfil
+│       ├── modelos.html               # Catálogo original
+│       ├── catalogo.html              # Catálogo de autos en venta
+│       ├── anuncio_detalle.html       # Detalle del auto con galería
+│       ├── chat.html                  # Chat en tiempo real
+│       ├── ofertas.html               # Panel de ofertas
+│       └── reportes_admin.html        # Panel admin de reportes
+├── database/                          # Scripts SQL
+│   ├── init/                          # Init automático MariaDB/MySQL
+│   └── init_postgres/                 # Init automático PostgreSQL
+├── scripts/
+│   └── create_admin.py               # Crea usuario admin idempotente
+├── tests/                             # Pruebas pytest
+├── alembic/                           # Migraciones opcionales
+├── docker-compose.yml                 # App + MariaDB
 ├── docker-compose.mysql.yml           # App + MySQL
 ├── docker-compose.postgres.yml        # App + PostgreSQL
+├── start.sh                           # Inicia servidor (venv + app)
+├── stop.sh                            # Detiene servidor
 ├── startdb.sh                         # Inicia MariaDB local (.mariadb/)
 ├── stopdb.sh                          # Apaga MariaDB local sin borrar datos
 ├── requirements.txt
-└── run.py
+└── run.py                             # Entry point del servidor
 ```
 
 ## Instalación
@@ -96,7 +149,6 @@ tallerdbProyect/
 ```bash
 cp .env.example .env
 docker compose up --build
-# La base de datos se crea y se puebla automáticamente con database/init/
 ```
 
 Abrir: <http://localhost:8000>
@@ -111,28 +163,68 @@ docker compose -f docker-compose.mysql.yml up --build
 docker compose -f docker-compose.postgres.yml up --build
 ```
 
-### Opción C — Local con MariaDB
+### Opción C — Local con MariaDB (recomendada)
 
 ```bash
-# 1. Entorno virtual
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-
-# 2. Configurar .env (los valores por defecto ya apuntan a MariaDB local)
-cp .env.example .env
-
-# 3. Iniciar MariaDB del proyecto (crea datos, base, esquema y datos de ejemplo)
+# 1. Iniciar MariaDB local (crea base, esquema y usuario)
 ./startdb.sh
 
-# 4. Usuario admin y servidor
-python scripts/create_admin.py
-python run.py
+# 2. Iniciar servidor (crea venv, instala deps, crea admin, levanta app)
+./start.sh
 
-# 5. Apagar MariaDB al terminar (los datos se conservan)
+# 3. Detener todo
+./stop.sh
 ./stopdb.sh
 ```
 
-`startdb.sh` usa una instancia propia en `.mariadb/` (ignorada por git):
+### Opción D — Local con SQLite (sin servidor)
+
+```bash
+# En .env:
+DATABASE_TYPE=sqlite
+SQLITE_PATH=./dev.db
+
+# Iniciar
+./start.sh
+```
+
+## Scripts de gestión
+
+| Script | Descripción |
+|--------|-------------|
+| `./start.sh` | Crea/actualiza venv, instala deps, crea admin, inicia servidor en background |
+| `./stop.sh` | Detiene el servidor y limpia procesos huérfanos |
+| `./startdb.sh` | Inicia MariaDB local en `.mariadb/` con esquema y datos |
+| `./stopdb.sh` | Apaga MariaDB sin borrar datos |
+
+### `./start.sh` — Iniciar el servidor
+
+- Crea el entorno virtual `.venv` si no existe.
+- Instala las dependencias de `requirements.txt`.
+- Ejecuta `scripts/create_admin.py` para crear el usuario admin.
+- Inicia el servidor en background y guarda el PID en `.server.pid`.
+- Espera a que responda antes de salir.
+- Muestra la URL, logs y comando para detener.
+
+### `./stop.sh` — Detener el servidor
+
+- Lee el PID de `.server.pid` y detiene el proceso.
+- Limpia cualquier proceso restante en el puerto 8000.
+- Elimina procesos uvicorn/watchfiles huérfanos.
+
+### `./startdb.sh` — Iniciar MariaDB local
+
+- Inicializa el datadir en `.mariadb/data` si es la primera vez.
+- Arranca MariaDB en `127.0.0.1:3306` con root local por socket.
+- Crea la base de datos y el usuario de `.env` de forma idempotente.
+- Carga el esquema si falta (`database/init/01_schema.sql`).
+- Opcionalmente carga datos de ejemplo (`--no-seed` para omitir).
+
+### `./stopdb.sh` — Apagar MariaDB local
+
+- Apaga por socket de forma ordenada.
+- Si no responde, fuerza por PID.
+- **No borra datos**: el directorio `.mariadb/` se conserva.
 
 | Recurso | Ruta por defecto |
 |---------|------------------|
@@ -141,56 +233,96 @@ python run.py
 | PID | `.mariadb/run/mariadb.pid` |
 | Log | `.mariadb/log/mariadb.err` |
 
-- Escucha en `127.0.0.1:${MARIADB_PORT:-3306}` con root local por socket.
-- Crea la base y el usuario de `.env` (`MARIADB_DATABASE`, `MARIADB_USER`,
-  `MARIADB_PASSWORD`) de forma idempotente.
-- La primera vez inicializa el datadir; si el catálogo está vacío carga
-  `database/init/02_seed_modelos.sql`.
-- `./startdb.sh --no-seed` evita cargar los datos de ejemplo.
-- `./stopdb.sh` apaga por socket y, si hace falta, por PID; **no borra datos**.
-
-Alternativa manual para MariaDB/MySQL/PostgreSQL:
-```bash
-mariadb -u root -p < database/schema_mariadb.sql
-# psql -U taller -d tallerdb -f database/schema_postgresql.sql
-mariadb -u taller -p tallerdb < database/seed_modelos.sql
-```
-
 Al arrancar, la aplicación comprueba la conexión, crea las tablas que falten y
-añade columnas nullable nuevas (por ejemplo las 3D) a instalaciones existentes.
+sincroniza columnas nuevas de forma automática.
 
 ## Uso
 
+### Páginas principales
+
 | Ruta | Método | Descripción |
 |------|--------|-------------|
-| `/` | GET | Landing pública; redirige al panel si hay sesión |
+| `/` | GET | Landing pública |
 | `/register` | GET/POST | Registro público de usuarios |
-| `/login` | GET/POST | Inicio de sesión |
+| `/login` | GET/POST | Inicio de sesión (redirige a `/auto/`) |
 | `/logout` | POST | Cerrar sesión |
-| `/dashboard` | GET | Panel protegido (requiere auth) |
-| `/profile` | GET | Mi perfil: datos de la cuenta (requiere auth) |
-| `/profile/password` | POST | Cambiar la contraseña propia (requiere auth) |
+| `/dashboard` | GET | Panel con estadísticas (requiere auth) |
+| `/profile` | GET | Mi perfil: datos y cambio de contraseña |
+| `/profile/password` | POST | Cambiar contraseña (requiere auth) |
 | `/health` | GET | Liveness del proceso |
 | `/ready` | GET | Readiness: comprueba la base de datos |
-| **`/modelos`** | **GET** | **Catálogo con búsqueda, filtros y paginación** |
-| **`/modelos/api`** | **GET/POST** | **Listar / crear modelos (POST requiere admin)** |
-| **`/modelos/api/{id}`** | **GET/PUT/DELETE** | **Consultar / actualizar / borrar (PUT y DELETE requieren admin)** |
-| **`/modelos/api/{id}/3d`** | **POST/DELETE** | **Subir / quitar el GLB (requiere admin)** |
-| **`/modelos/{id}/3d`** | **GET** | **Descargar el GLB (requiere sesión)** |
-| `/admin/users` | GET | Listar usuarios (JSON, requiere admin) |
-| `/admin/users/create` | POST | Crear usuario/administrador (requiere admin) |
-| `/admin/users/{id}/toggle-admin` | POST | Otorgar o quitar permisos de admin |
-| `/admin/users/{id}/toggle-active` | POST | Activar o desactivar una cuenta |
-| `/docs` | GET | Swagger UI (solo con `DEBUG=true`) |
-| `/redoc` | GET | ReDoc (solo con `DEBUG=true`) |
+| `/docs` | GET | Swagger UI (solo `DEBUG=true`) |
 
-> Solo los administradores pueden crear, editar, borrar modelos y gestionar sus
-> archivos 3D. Cualquier usuario autenticado puede consultar el catálogo.
->
-> La interfaz muestra únicamente las acciones permitidas para cada rol: un
-> usuario normal no ve botones de administración ni elementos bloqueados. La
-> autorización real siempre se valida en el backend, que responde `403` ante
-> cualquier intento directo.
+### Catálogo de autos en venta
+
+| Ruta | Método | Descripción |
+|------|--------|-------------|
+| `/auto/` | GET | Catálogo público con filtros y paginación |
+| `/auto/api` | GET | Listar anuncios (JSON) |
+| `/auto/api` | POST | Publicar auto a la venta (requiere auth) |
+| `/auto/api/{id}` | PUT | Editar anuncio (solo el vendedor) |
+| `/auto/api/{id}` | DELETE | Eliminar anuncio (solo el vendedor) |
+| `/auto/{slug}` | GET | Detalle del auto con galería y especificaciones |
+
+### Chat en tiempo real
+
+| Ruta | Método | Descripción |
+|------|--------|-------------|
+| `/chat/` | GET | Página de chat con lista de conversaciones |
+| `/chat/ws` | WebSocket | Chat en tiempo real (param: `user_id`) |
+| `/chat/api/mensaje` | POST | Enviar mensaje REST (query: `remitente_id`, `destinatario_id`, `contenido`) |
+| `/chat/api/historial/{otro_usuario_id}` | GET | Historial de mensajes (requiere auth) |
+
+### Ofertas y negociación
+
+| Ruta | Método | Descripción |
+|------|--------|-------------|
+| `/ofertas/` | GET | Panel de ofertas (requiere auth) |
+| `/ofertas/api` | POST | Crear oferta (requiere mensaje previo al vendedor) |
+| `/ofertas/api/{id}/responder` | POST | Aceptar, rechazar o contraofertar |
+| `/ofertas/api/{id}/cancelar` | POST | Cancelar oferta |
+| `/ofertas/api/anuncio/{id}` | GET | Listar ofertas de un anuncio |
+| `/ofertas/tratos/api` | GET | Listar tratos cerrados (requiere auth) |
+
+### Fotos de anuncios
+
+| Ruta | Método | Descripción |
+|------|--------|-------------|
+| `/fotos/anuncio/{id}` | POST | Subir foto (solo el vendedor, máx 10, 5MB) |
+| `/fotos/anuncio/{id}/{foto_id}` | DELETE | Eliminar foto (solo el vendedor) |
+| `/fotos/{foto_id}` | GET | Servir foto (pública) |
+
+### Reportes
+
+| Ruta | Método | Descripción |
+|------|--------|-------------|
+| `/reportes/api` | POST | Reportar usuario (requiere auth) |
+| `/reportes/api` | GET | Listar reportes (solo admin) |
+| `/reportes/api/{id}/resolver` | POST | Resolver reporte (solo admin) |
+| `/reportes/` | GET | Panel admin de reportes (solo admin) |
+
+### Modelos originales (catálogo 3D)
+
+| Ruta | Método | Descripción |
+|------|--------|-------------|
+| `/modelos` | GET | Catálogo con búsqueda, filtros y paginación |
+| `/modelos/api` | GET/POST | Listar / crear modelos (POST requiere admin) |
+| `/modelos/api/{id}` | GET/PUT/DELETE | Consultar / actualizar / borrar |
+| `/modelos/api/{id}/3d` | POST/DELETE | Subir / quitar GLB (requiere admin) |
+| `/modelos/{id}/3d` | GET | Descargar GLB (requiere sesión) |
+
+### Administración de usuarios
+
+| Ruta | Método | Descripción |
+|------|--------|-------------|
+| `/admin/users` | GET | Listar usuarios (JSON, requiere admin) |
+| `/admin/users/create` | POST | Crear usuario/admin (requiere admin) |
+| `/admin/users/{id}/toggle-admin` | POST | Otorgar/quitar admin |
+| `/admin/users/{id}/toggle-active` | POST | Activar/desactivar cuenta |
+
+> La interfaz muestra únicamente las acciones permitidas para cada rol. La
+> autorización real siempre se valida en el backend (`403` ante intentos no
+> autorizados).
 
 ## Usuario administrador
 
@@ -201,73 +333,37 @@ El proyecto incluye un administrador por defecto, definido en `.env`:
 | Email | `admin@tallerdb.local` |
 | Contraseña | `admin123` |
 
-Se crea ejecutando el script idempotente (si ya existe, no lo duplica):
+Se crea automáticamente con `./start.sh` o manualmente:
 
 ```bash
 python scripts/create_admin.py
 ```
 
-- Con `./start.sh` se ejecuta automáticamente antes de levantar el servidor.
-- Con Docker Compose también se ejecuta al arrancar el contenedor de la app.
-- Con `./startdb.sh && python run.py` ejecútalo una vez antes del primer
-  arranque (la app crea el esquema, pero no el usuario admin).
-
 > **Importante:** cambia `ADMIN_EMAIL` y `ADMIN_PASSWORD` en `.env` **antes**
 > del primer arranque en producción. La contraseña debe tener entre 8 y 72
-> bytes (límite de bcrypt). Si el usuario ya existe, el script no actualiza la
-> contraseña; para cambiarla, edita la base de datos o crea otro administrador.
+> bytes (límite de bcrypt).
 
 ### Crear más administradores
 
-Con una sesión de administrador:
+Desde `/dashboard` → **Gestión de Usuarios** → **Crear Admin**.
 
-1. Entra en `/dashboard`.
-2. En **Gestión de Usuarios**, pulsa **Crear Admin**.
-3. Indica email, contraseña y confirmación (mínimo 8 caracteres).
-
-Desde esa misma tabla también puedes:
-
-- **Otorgar o quitar permisos** de administrador a un usuario existente
-  (botón de candado).
-- **Activar o desactivar** cuentas.
-- Ver el listado completo de usuarios registrados.
-
-> El panel de administración **no muestra los hashes de las contraseñas**. Solo
-> se listan ID, email, rol, estado y fecha de registro.
-
-Por API (con la sesión de admin):
+Por API:
 
 ```bash
-# Crear un administrador
 curl -X POST http://localhost:8000/admin/users/create \
   -H "Content-Type: application/json" \
   -H "Cookie: session=..." \
-  -d '{"email":"otro-admin@tallerdb.local","password":"clave-segura","is_admin":true}'
-
-# Convertir un usuario existente en administrador
-curl -X POST http://localhost:8000/admin/users/2/toggle-admin \
-  -H "Content-Type: application/json" \
-  -H "Cookie: session=..." \
-  -d '{"is_admin":true}'
+  -d '{"email":"otro@tallerdb.local","password":"clave-segura","is_admin":true}'
 ```
 
-> Por seguridad, un administrador no puede quitarse sus propios permisos ni
-> desactivar su propia cuenta. El registro público (`/register`) siempre crea
-> usuarios estándar; los permisos de admin se otorgan desde el panel.
+> Un administrador no puede quitarse sus propios permisos ni desactivar su
+> propia cuenta.
 
 ## Mi perfil
 
-Todos los usuarios autenticados disponen de `/profile` (enlace **Mi perfil** en
-el menú lateral y en las acciones rápidas del panel):
-
-- Consultar ID, email, rol, estado y fecha de registro.
-- Cambiar la propia contraseña indicando la actual y la nueva.
-- La nueva contraseña debe tener entre 8 y 72 bytes y ser diferente a la actual.
-- Un usuario solo puede cambiar su propia contraseña; no hay forma de modificar
-  la de otra cuenta desde este formulario.
+En `/profile` cada usuario puede consultar sus datos y cambiar su contraseña.
 
 ```bash
-# Cambiar la contraseña (formulario HTML)
 curl -X POST http://localhost:8000/profile/password \
   -H "Cookie: session=..." \
   -d "current_password=actual" \
@@ -275,14 +371,35 @@ curl -X POST http://localhost:8000/profile/password \
   -d "confirm_password=nueva-clave"
 ```
 
+## Modelos 3D
+
+- Formato: **GLB** (glTF binario v2), hasta 25 MB.
+- Guardados en `./uploads/modelos3d`, servidos con `/modelos/{id}/3d`.
+- Validación: extensión, content-type, cabecera glTF, versión, chunk JSON.
+- `model-viewer` servido localmente (sin CDN).
+
+## Galería de fotos
+
+- Formatos: **JPG, PNG, WebP**. Máx **5MB** por foto, **10 fotos** por anuncio.
+- Validación de **magic bytes** para evitar código malicioso.
+- Solo el vendedor puede subir/eliminar fotos de sus anuncios.
+- Las fotos se sirven públicamente con caché de 24 horas.
+
+## Flujo de compraventa
+
+1. **Publicar**: El vendedor crea un anuncio con datos del auto y fotos.
+2. **Contactar**: El comprador envía un mensaje al vendedor desde la página del auto.
+3. **Ofertar**: El comprador hace una oferta (requiere mensaje previo).
+4. **Negociar**: El vendedor acepta, rechaza o contraoferta. El proceso continúa.
+5. **Cerrar trato**: Al aceptar, se crea un trato y el anuncio pasa a "vendido".
+6. **Reportar**: Cualquier usuario puede reportar a otro. Solo el admin resuelve.
+
 ## Base de datos
 
-La precedencia de configuración es: **variables de entorno / `.env` >
-`config.json` > valores por defecto**. El `.env` incluido usa **MariaDB local**
-(`DATABASE_TYPE=mariadb`, `MARIADB_HOST=127.0.0.1`).
+La precedencia es: **`.env` > `config.json` > valores por defecto**.
 
 ```env
-# MariaDB
+# MariaDB (por defecto)
 DATABASE_TYPE=mariadb
 MARIADB_HOST=127.0.0.1
 MARIADB_PORT=3306
@@ -290,73 +407,29 @@ MARIADB_USER=taller
 MARIADB_PASSWORD=tallerpass
 MARIADB_DATABASE=tallerdb
 
-# MySQL (mismas claves con prefijo MYSQL_)
-DATABASE_TYPE=mysql
-
-# PostgreSQL
-DATABASE_TYPE=postgresql
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=taller
-POSTGRES_PASSWORD=tallerpass
-POSTGRES_DATABASE=tallerdb
-
-# SQLite (desarrollo rápido, sin servidor)
+# SQLite (sin servidor)
 DATABASE_TYPE=sqlite
 SQLITE_PATH=./dev.db
-
-# Override total (máxima prioridad)
-DATABASE_URL=postgresql://taller:tallerpass@localhost:5432/tallerdb
 ```
 
-También se aceptan las variables genéricas `DB_HOST`, `DB_PORT`, `DB_USER`,
-`DB_PASSWORD`, `DB_NAME` y `DB_CHARSET`. Un `DATABASE_TYPE` desconocido detiene
-el arranque con un error de validación; nunca se cae silenciosamente a SQLite.
+### Tablas de la base de datos
 
-### Fail-fast y despliegue
+| Tabla | Descripción |
+|-------|-------------|
+| `users` | Usuarios (email, password hash, rol, estado) |
+| `modelos` | Catálogo original de autos con soporte 3D |
+| `anuncios` | Autos a la venta (slug, vendedor, estado) |
+| `fotos` | Galería de fotos por anuncio |
+| `mensajes` | Chat entre usuarios |
+| `ofertas` | Ofertas de compra con cadena de negociación |
+| `tratos` | Tratos cerrados con monto final |
+| `reportes` | Reportes de usuarios (solo visibles por admin) |
 
-- Con **SQLite** la aplicación crea el archivo y arranca.
-- Con MySQL/MariaDB/PostgreSQL se ejecuta `SELECT 1` con timeout
-  (`DATABASE_CONNECT_TIMEOUT`, 5 s por defecto) antes de aceptar peticiones.
-- Si la conexión falla, el proceso termina y Docker lo reinicia según su política.
-- `GET /ready` devuelve `503` si la base deja de responder.
-- Con `DEBUG=false` se valida el host de la petición con `ALLOWED_HOSTS`
-  (`localhost,127.0.0.1,*.tallerdb.local` por defecto). Ajusta esa variable al
-  dominio o IP reales del despliegue.
-- `FORCE_HTTPS=true` activa la redirección a HTTPS, HSTS y cookies `Secure`;
-  déjalo en `false` si TLS termina en un proxy delante de la aplicación.
-- Con `DEBUG=false` se deshabilitan `/docs`, `/redoc` y `/openapi.json`; en
-  desarrollo (`DEBUG=true`) siguen disponibles en `/docs`.
+### Fail-fast
 
-## Modelos 3D
-
-- Formato admitido: **GLB** (glTF binario versión 2), hasta `MAX_3D_SIZE_MB`
-  (25 MB por defecto).
-- Los archivos se guardan en `UPLOADS_DIR/modelos3d` (por defecto `./uploads`,
-  fuera de `app/static`) y se sirven con `/modelos/{id}/3d` solo a usuarios
-  autenticados.
-- La validación comprueba extensión, `content-type`, cabecera `glTF`, versión,
-  tamaño declarado y chunk JSON; la escritura es atómica.
-- En el catálogo, el botón **Ver en 3D** abre el visor; los administradores
-  disponen de **Añadir/Reemplazar 3D** y **Quitar 3D**.
-- `model-viewer` se sirve localmente desde
-  `app/static/vendor/model-viewer.min.js` (sin CDN).
-
-## Scripts SQL (`database/`)
-
-| Archivo | Propósito |
-|---------|-----------|
-| `schema_mariadb.sql` | Crea la base de datos y las tablas para MariaDB/MySQL. |
-| `schema_postgresql.sql` | Crea las tablas para PostgreSQL. |
-| `seed_modelos.sql` | Inserta 18 autos de ejemplo. |
-| `pruebas_crud.sql` | Demuestra INSERT / SELECT / UPDATE / DELETE con `ROLLBACK`. |
-| `init/*.sql` | Ejecutados automáticamente por MariaDB/MySQL en Docker. |
-| `init_postgres/*.sql` | Ejecutados automáticamente por PostgreSQL en Docker. |
-
-```bash
-# Pruebas CRUD (incluye una violación de UNIQUE a propósito)
-mariadb -u taller -p --force tallerdb < database/pruebas_crud.sql
-```
+- Con **SQLite** la app crea el archivo y arranca.
+- Con **MySQL/MariaDB/PostgreSQL** se valida la conexión con timeout (5s).
+- Si falla, el proceso termina. `/ready` devuelve `503` si la DB deja de responder.
 
 ## CLI de comprobaciones
 
@@ -364,57 +437,46 @@ mariadb -u taller -p --force tallerdb < database/pruebas_crud.sql
 directorio y no arrancan el servidor (para eso usa `python run.py`).
 
 ```bash
-# Verifica conexión, crea el esquema si falta, comprueba tablas y columnas 3D
-# y hace un INSERT/UPDATE/SELECT con ROLLBACK (no deja datos).
+# Verifica conexión y esquema
 python app/main.py testdb
 
-# Ejecuta toda la suite pytest (descubre automáticamente pruebas nuevas).
+# Ejecuta toda la suite pytest
 python app/main.py test
-
-# Argumentos extra para pytest (archivo, -k, -v, etc.)
-python app/main.py test -q tests/test_config.py
-python app/main.py test tests/test_modelos_3d.py -vv
 ```
-
-`testdb` termina con código `0` si todo está correcto y `1` si falla, mostrando
-una pista (`./startdb.sh`) cuando la base no responde.
 
 ## Tests
 
 ```bash
-# Recomendado: ejecuta toda la suite con el intérprete actual
 python app/main.py test
-
-# Equivalente directo
+# o
 .venv/bin/python -m pytest -p no:cacheprovider -q
 ```
 
-Las pruebas cubren autenticación/registro, filtros del catálogo, configuración
-de los cuatro motores, fail-fast y el ciclo de vida de los GLB.
-
-## Evidencia / informe
-
-El informe completo con portada, introducción, descripción de interfaces, pruebas
-CRUD, código SQL, resultados, recomendaciones, conclusiones y referencias APA está en:
-
-```
-docs/INFORME_EVIDENCIA.md
-```
+Las pruebas cubren auth, CRUD, filtros, 3D, permisos, perfil, config y fail-fast.
 
 ## Desarrollo
 
 ```bash
-# Base de datos local (dejar apagada al terminar)
+# Arrancar todo
 ./startdb.sh
+./start.sh
+
+# Detener todo
+./stop.sh
 ./stopdb.sh
-
-# Diagnóstico de la base de datos
-python app/main.py testdb
-
-# Migración manual (opcional; el arranque ya sincroniza columnas nullable)
-alembic revision --autogenerate -m "descripcion"
-alembic upgrade head
 
 # Servidor con recarga automática
 python run.py
+
+# Migración manual (opcional)
+alembic revision --autogenerate -m "descripcion"
+alembic upgrade head
 ```
+
+## Credenciales de prueba
+
+| Rol | Email | Contraseña |
+|-----|-------|------------|
+| Admin | `admin@tallerdb.local` | `admin123` |
+
+> Cambia las credenciales en `.env` antes de usar en producción.

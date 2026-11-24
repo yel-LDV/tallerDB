@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}{% if otro_usuario %}Chat con {{ otro_usuario.email }}{% else %}Chats{% endif %} — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+    {% with current_page='chats' %}
+    {% include '_sidebar.html' %}
+    {% endwith %}
+    <div class="main-wrapper">
+        <header class="top-header">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle"><i data-lucide="menu"></i></button>
+            <h1>
+                <i data-lucide="message-square" style="width:22px;height:22px;vertical-align:middle;margin-right:0.4rem"></i>
+                {% if otro_usuario %}Chat con {{ otro_usuario.email }}{% else %}Chats{% endif %}
+            </h1>
+            <div class="header-actions">
+                <button class="btn-icon" id="theme-toggle"></button>
+                <span class="user-badge badge-user">{{ user.email }}</span>
+            </div>
+        </header>
+        <main class="main-content">
+
+{# ==================== VISTA: Lista de chats ==================== #}
+{% if not otro_usuario %}
+        <div class="card">
+            <div class="card-header">
+                <h2>Mis conversaciones</h2>
+            </div>
+            {% if contactos %}
+            <div class="chat-list">
+                {% for contacto in contactos %}
+                <a href="/chat/?con_usuario_id={{ contacto.user.id }}" class="chat-list-item">
+                    <div class="chat-list-avatar">
+                        <i data-lucide="user" style="width:24px;height:24px"></i>
+                    </div>
+                    <div class="chat-list-info">
+                        <div class="chat-list-name">{{ contacto.user.email }}</div>
+                        <div class="chat-list-time">
+                            <i data-lucide="clock" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i>
+                            {{ contacto.ultimo.strftime('%d/%m/%Y %H:%M') }}
+                        </div>
+                    </div>
+                    <div class="chat-list-arrow">
+                        <i data-lucide="chevron-right" style="width:18px;height:18px"></i>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i data-lucide="message-square" style="width:48px;height:48px;opacity:0.3"></i>
+                <p class="text-muted">No tienes conversaciones aún.</p>
+                <p class="text-muted" style="font-size:0.875rem">Inicia un chat desde la página de un anuncio.</p>
+                <a href="/auto/" class="btn btn-primary btn-sm">Ver catálogo</a>
+            </div>
+            {% endif %}
+        </div>
+
+{# ==================== VISTA: Conversación individual ==================== #}
+{% else %}
+        <div class="card" style="height:70vh;display:flex;flex-direction:column">
+            <div id="chat-messages" style="flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:0.5rem">
+                {% for msg in mensajes %}
+                <div class="chat-bubble {% if msg.remitente_id == user.id %}chat-sent{% else %}chat-received{% endif %}">
+                    <div class="chat-text">{{ msg.contenido }}</div>
+                    <div class="chat-time">{{ msg.creado_at.strftime('%H:%M') }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <form id="chat-form" style="display:flex;gap:0.5rem;padding:1rem;border-top:1px solid var(--color-border)">
+                <input type="text" id="chat-input" placeholder="Escribe un mensaje..." style="flex:1" autocomplete="off">
+                <button type="submit" class="btn btn-primary"><i data-lucide="send" style="width:16px;height:16px"></i> Enviar</button>
+            </form>
+        </div>
+{% endif %}
+
+        </main>
+    </div>
+</div>
+
+<style>
+.chat-bubble { max-width: 70%; padding: 0.75rem 1rem; border-radius: var(--radius-lg); line-height: 1.4; word-wrap: break-word; }
+.chat-sent { align-self: flex-end; background-color: #28a745; color: white; border-bottom-right-radius: 4px; }
+.chat-received { align-self: flex-start; background-color: #007bff; color: white; border-bottom-left-radius: 4px; }
+.chat-text { margin-bottom: 0.25rem; }
+.chat-time { font-size: 0.6875rem; opacity: 0.7; text-align: right; }
+
+/* Lista de chats */
+.chat-list { display: flex; flex-direction: column; }
+.chat-list-item {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1rem; text-decoration: none; color: var(--color-text);
+    border-bottom: 1px solid var(--color-border); transition: background 0.15s;
+}
+.chat-list-item:hover { background: var(--color-muted); }
+.chat-list-item:last-child { border-bottom: none; }
+.chat-list-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--color-muted); display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; color: var(--color-text-muted);
+}
+.chat-list-info { flex: 1; min-width: 0; }
+.chat-list-name { font-weight: 600; margin-bottom: 0.25rem; }
+.chat-list-time { font-size: 0.8125rem; color: var(--color-text-muted); }
+.chat-list-arrow { color: var(--color-text-muted); flex-shrink: 0; }
+
+/* Estado vacío */
+.empty-state { text-align: center; padding: 3rem 1rem; }
+.empty-state p { margin: 0.5rem 0; }
+.empty-state .btn { margin-top: 1rem; }
+</style>
+
+<div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+{% endblock %}
+
+{% block scripts %}
+{% include '_sidebar_js.html' %}
+
+{% if otro_usuario %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const userId = {{ user.id }};
+    const otherId = {{ otro_usuario.id }};
+    const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${protocol}://${location.host}/chat/ws?user_id=${userId}`);
+
+    const messagesDiv = document.getElementById('chat-messages');
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('chat-input');
+
+    ws.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'message' && data.remitente_id === otherId) {
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble chat-received';
+            bubble.innerHTML = `<div class="chat-text">${data.contenido}</div><div class="chat-time">${new Date().toLocaleTimeString('es', {hour:'2-digit',minute:'2-digit'})}</div>`;
+            messagesDiv.appendChild(bubble);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+    };
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+        ws.send(JSON.stringify({ destinatario_id: otherId, contenido: text }));
+
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble chat-sent';
+        bubble.innerHTML = `<div class="chat-text">${text}</div><div class="chat-time">${new Date().toLocaleTimeString('es', {hour:'2-digit',minute:'2-digit'})}</div>`;
+        messagesDiv.appendChild(bubble);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        input.value = '';
+    });
+
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+});
+</script>
+{% endif %}
+{% endblock %}

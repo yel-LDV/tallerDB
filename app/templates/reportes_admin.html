@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Reportes — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+    {% with current_page='reportes' %}
+    {% include '_sidebar.html' %}
+    {% endwith %}
+    <div class="main-wrapper">
+        <header class="top-header">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle"><i data-lucide="menu"></i></button>
+            <h1><i data-lucide="flag" style="width:22px;height:22px;vertical-align:middle;margin-right:0.4rem"></i> Reportes</h1>
+            <div class="header-actions">
+                <button class="btn-icon" id="theme-toggle"></button>
+                <span class="user-badge badge-admin">{{ user.email }}</span>
+            </div>
+        </header>
+        <main class="main-content">
+            <div class="card">
+                <div class="card-header"><h2>Reportes pendientes y resueltos</h2></div>
+                {% if reportes %}
+                <div class="table-responsive">
+                    <table class="users-table">
+                        <thead><tr><th>ID</th><th>Reportado</th><th>Motivo</th><th>Detalles</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead>
+                        <tbody>
+                            {% for r in reportes %}
+                            <tr>
+                                <td>#{{ r.id }}</td>
+                                <td>Usuario #{{ r.usuario_reportado_id }}</td>
+                                <td>{{ r.motivo.value.replace('_', ' ')|title }}</td>
+                                <td>{{ r.detalles or '-' }}</td>
+                                <td>
+                                    {% if r.estado.value == 'pendiente' %}<span class="badge" style="background:#fef3c7;color:#92400e"><i data-lucide="clock" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Pendiente</span>
+                                    {% elif r.estado.value == 'resuelto' %}<span class="badge badge-success"><i data-lucide="check" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Resuelto</span>
+                                    {% elif r.estado.value == 'en_revision' %}<span class="badge" style="background:#dbeafe;color:#1e40af"><i data-lucide="search" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> En revisión</span>
+                                    {% elif r.estado.value == 'descartado' %}<span class="badge" style="background:#e5e7eb;color:#374151"><i data-lucide="x" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Descartado</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ r.creado_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td class="action-buttons">
+                                    {% if r.estado.value == 'pendiente' %}
+                                    <button class="btn btn-primary btn-sm" onclick="resolverReporte({{ r.id }})"><i data-lucide="check-circle" style="width:14px;height:14px"></i> Marcar resuelto</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No hay reportes.</p>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+{% endblock %}
+
+{% block scripts %}
+{% include '_sidebar_js.html' %}
+
+<script>
+async function resolverReporte(id) {
+    if (!confirm('¿Marcar este reporte como resuelto?')) return;
+    await fetch(`/reportes/api/${id}/resolver`, { method: 'POST' });
+    location.reload();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Catálogo de Autos — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+    {% with current_page='catalogo' %}
+    {% include '_sidebar.html' %}
+    {% endwith %}
+
+    <!-- Main content -->
+    <div class="main-wrapper">
+        <header class="top-header">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle"><i data-lucide="menu"></i></button>
+            <h1><i data-lucide="car" style="width:24px;height:24px;vertical-align:middle;margin-right:0.5rem"></i> Catálogo de Autos</h1>
+            <div class="header-actions">
+                <button class="btn-icon" id="theme-toggle" aria-label="Cambiar tema"></button>
+                {% if user %}
+                <span class="user-badge {% if user.is_admin %}badge-admin{% else %}badge-user{% endif %}">
+                    {{ user.email }}
+                </span>
+                {% endif %}
+            </div>
+        </header>
+
+        <main class="main-content">
+            {% if request.query_params.get('bienvenido') == '1' %}
+            <div class="alert alert-success" role="status">
+                Tu cuenta se creó correctamente. ¡Bienvenido a {{ app_name }}!
+            </div>
+            {% endif %}
+            <!-- Filtros -->
+            <div class="card" style="margin-bottom:1.5rem">
+                <form class="filtros-form" method="get" action="/auto/">
+                    <div class="filtros-row">
+                        <div class="filtros-group" style="flex:2">
+                            <label for="q">Buscar</label>
+                            <input type="text" id="q" name="q" value="{{ filtros.q or '' }}" placeholder="Marca, modelo, descripción...">
+                        </div>
+                        <div class="filtros-group-sm">
+                            <label for="marca">Marca</label>
+                            <select id="marca" name="marca">
+                                <option value="">Todas</option>
+                                {% for m in marcas %}
+                                <option value="{{ m }}" {% if filtros.marca == m %}selected{% endif %}>{{ m }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filtros-group-sm">
+                            <label for="tipo">Tipo</label>
+                            <select id="tipo" name="tipo">
+                                <option value="">Todos</option>
+                                {% for t in tipos %}
+                                <option value="{{ t }}" {% if filtros.tipo == t %}selected{% endif %}>{{ t }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filtros-group-xs">
+                            <label for="anio_min">Año desde</label>
+                            <input type="number" id="anio_min" name="anio_min" value="{{ filtros.anio_min or '' }}" min="1900" max="2100">
+                        </div>
+                        <div class="filtros-group-xs">
+                            <label for="anio_max">Año hasta</label>
+                            <input type="number" id="anio_max" name="anio_max" value="{{ filtros.anio_max or '' }}" min="1900" max="2100">
+                        </div>
+                        <div class="filtros-group-xs">
+                            <label for="orden">Ordenar</label>
+                            <select id="orden" name="orden">
+                                <option value="recientes" {% if filtros.orden == 'recientes' %}selected{% endif %}>Recientes</option>
+                                <option value="precio_asc" {% if filtros.orden == 'precio_asc' %}selected{% endif %}>Precio ↑</option>
+                                <option value="precio_desc" {% if filtros.orden == 'precio_desc' %}selected{% endif %}>Precio ↓</option>
+                                <option value="anio_desc" {% if filtros.orden == 'anio_desc' %}selected{% endif %}>Año ↓</option>
+                                <option value="marca" {% if filtros.orden == 'marca' %}selected{% endif %}>Marca</option>
+                            </select>
+                        </div>
+                        <div class="filtros-actions">
+                            <button type="submit" class="btn btn-primary">Filtrar</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Grid de anuncios activos -->
+            {% if anuncios %}
+            <h2 style="margin:0 0 1rem;font-size:1.25rem"><i data-lucide="car" style="width:18px;height:18px;vertical-align:middle;margin-right:0.35rem"></i> Autos en venta ({{ paginacion.total }})</h2>
+            <div class="modelos-grid">
+                {% for anuncio in anuncios %}
+                <a href="/auto/{{ anuncio.slug }}" class="modelo-card" style="text-decoration:none">
+                    <div class="modelo-card-image">
+                        <div class="modelo-car-avatar">
+                            <i data-lucide="car" style="width:32px;height:32px;opacity:0.3"></i>
+                        </div>
+                        <span class="badge badge-success" style="position:absolute;top:0.625rem;left:0.625rem"><i data-lucide="check-circle" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> Disponible</span>
+                    </div>
+                    <div class="modelo-card-body">
+                        <h3 class="modelo-titulo">{{ anuncio.marca }} {{ anuncio.nombre }}</h3>
+                        <dl class="modelo-info">
+                            <div><dt>Año</dt><dd>{{ anuncio.anio }}</dd></div>
+                            <div><dt>Precio</dt><dd class="modelo-precio">${{ anuncio.precio_oferta }}</dd></div>
+                            <div><dt>Tipo</dt><dd>{{ anuncio.tipo }}</dd></div>
+                            <div><dt>Transmisión</dt><dd>{{ anuncio.transmision }}</dd></div>
+                        </dl>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+
+            <!-- Paginación -->
+            {% if paginacion.total_paginas > 1 %}
+            <div class="pagination">
+                <span class="pagination-info">Mostrando {{ paginacion.total }} resultados</span>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="empty-state">
+                <i data-lucide="search" style="width:48px;height:48px;opacity:0.3"></i>
+                <h3>No hay autos en venta</h3>
+                <p class="text-muted">Intenta cambiar los filtros o publica tu primer auto.</p>
+                {% if user %}
+                <div class="empty-state-actions">
+                    <a href="/dashboard" class="btn btn-primary">Publicar un auto</a>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Sección de autos vendidos -->
+            {% if vendidos %}
+            <h2 style="margin:2rem 0 1rem;font-size:1.25rem"><i data-lucide="check-circle-2" style="width:18px;height:18px;vertical-align:middle;margin-right:0.35rem"></i> Autos vendidos recientemente</h2>
+            <div class="modelos-grid">
+                {% for anuncio in vendidos %}
+                <a href="/auto/{{ anuncio.slug }}" class="modelo-card" style="text-decoration:none;opacity:0.7">
+                    <div class="modelo-card-image">
+                        <div class="modelo-car-avatar">
+                            <i data-lucide="car" style="width:32px;height:32px;opacity:0.3"></i>
+                        </div>
+                        <span class="badge badge-danger" style="position:absolute;top:0.625rem;left:0.625rem"><i data-lucide="x-circle" style="width:12px;height:12px;vertical-align:middle;margin-right:2px"></i> VENDIDO</span>
+                    </div>
+                    <div class="modelo-card-body">
+                        <h3 class="modelo-titulo">{{ anuncio.marca }} {{ anuncio.nombre }}</h3>
+                        <dl class="modelo-info">
+                            <div><dt>Año</dt><dd>{{ anuncio.anio }}</dd></div>
+                            <div><dt>Precio</dt><dd class="modelo-precio">${{ anuncio.precio_oferta }}</dd></div>
+                            <div><dt>Tipo</dt><dd>{{ anuncio.tipo }}</dd></div>
+                            <div><dt>Transmisión</dt><dd>{{ anuncio.transmision }}</dd></div>
+                        </dl>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% include '_sidebar_js.html' %}
+{% endblock %}

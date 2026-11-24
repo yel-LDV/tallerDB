@@ -1,0 +1,83 @@
+{% set page = current_page | default('') %}
+<aside class="sidebar" id="sidebar" role="navigation" aria-label="Menú principal">
+    <div class="sidebar-header">
+        <h2>{{ app_name }}</h2>
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Alternar menú" aria-expanded="true">
+            <span class="toggle-icon"><i data-lucide="panel-left-close"></i></span>
+        </button>
+    </div>
+    <nav class="sidebar-nav">
+        <ul class="nav-list">
+            <li class="nav-item">
+                <a href="/dashboard" class="nav-link{% if page == 'dashboard' %} active{% endif %}">
+                    <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span>
+                    <span class="nav-text">Panel</span>
+                </a>
+            </li>
+            <li class="nav-divider"></li>
+            <li class="nav-section">Compraventa</li>
+            <li class="nav-item">
+                <a href="/auto/" class="nav-link{% if page in ('catalogo', 'anuncio') %} active{% endif %}">
+                    <span class="nav-icon"><i data-lucide="car"></i></span>
+                    <span class="nav-text">Catálogo</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/auto/publicar" class="nav-link{% if page == 'publicar' %} active{% endif %}">
+                    <span class="nav-icon"><i data-lucide="plus-circle"></i></span>
+                    <span class="nav-text">Publicar</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/chat/" class="nav-link{% if page == 'chats' %} active{% endif %}">
+                    <span class="nav-icon"><i data-lucide="message-square"></i></span>
+                    <span class="nav-text">Chats</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/ofertas/" class="nav-link{% if page == 'ofertas' %} active{% endif %}">
+                    <span class="nav-icon"><i data-lucide="hand-coins"></i></span>
+                    <span class="nav-text">Mis Ofertas</span>
+                </a>
+            </li>
+            <li class="nav-divider"></li>
+            <li class="nav-section">Cuenta</li>
+            <li class="nav-item">
+                <a href="/profile" class="nav-link{% if page == 'profile' %} active{% endif %}">
+                    <span class="nav-icon"><i data-lucide="user"></i></span>
+                    <span class="nav-text">Mi perfil</span>
+                </a>
+            </li>
+            {% if user and user.is_admin %}
+            <li class="nav-divider"></li>
+            <li class="nav-section">Administración</li>
+            <li class="nav-item">
+                <a href="/dashboard#users" class="nav-link{% if page == 'users' %} active{% endif %}">
+                    <span class="nav-icon"><i data-lucide="users"></i></span>
+                    <span class="nav-text">Usuarios</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/reportes/" class="nav-link{% if page == 'reportes' %} active{% endif %}">
+                    <span class="nav-icon"><i data-lucide="flag"></i></span>
+                    <span class="nav-text">Reportes</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    <div class="sidebar-footer">
+        {% if user %}
+        <form method="post" action="/logout" style="width: 100%;">
+            <button type="submit" class="btn btn-secondary btn-block">
+                <i data-lucide="log-out" style="width:16px;height:16px"></i> Cerrar sesión
+            </button>
+        </form>
+        {% else %}
+        <div style="display:flex;flex-direction:column;gap:0.5rem">
+            <a href="/login" class="btn btn-primary btn-block btn-sm">Iniciar sesión</a>
+            <a href="/register" class="btn btn-secondary btn-block btn-sm">Registrarse</a>
+        </div>
+        {% endif %}
+    </div>
+</aside>

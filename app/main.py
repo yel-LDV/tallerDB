@@ -28,6 +28,11 @@ from app.config import settings
 from app.database import check_database_connection, init_db
 from app.modelos.router import router as modelos_router
 from app.models.user import User
+from app.anuncios.router import router as anuncios_router
+from app.fotos.router import router as fotos_router
+from app.ventas.router import router as ventas_router
+from app.chat.router import router as chat_router
+from app.reportes.router import router as reportes_router
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -42,7 +47,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    description="TallerDB - Sistema de catálogo de autos (Modelos)",
+    description="TallerDB - Plataforma de compraventa de autos con chat, ofertas y reportes",
     lifespan=lifespan,
     # Swagger/OpenAPI solo en desarrollo; en producción queda deshabilitado.
     docs_url="/docs" if settings.debug else None,
@@ -96,6 +101,11 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(auth_router)
 app.include_router(modelos_router)
+app.include_router(anuncios_router)
+app.include_router(fotos_router)
+app.include_router(ventas_router)
+app.include_router(chat_router)
+app.include_router(reportes_router)
 
 
 @app.get("/", response_class=HTMLResponse)

@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Publicar vehículo — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+    {% with current_page='publicar' %}
+    {% include '_sidebar.html' %}
+    {% endwith %}
+    <div class="main-wrapper">
+        <header class="top-header">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle"><i data-lucide="menu"></i></button>
+            <h1>
+                <i data-lucide="plus-circle" style="width:22px;height:22px;vertical-align:middle;margin-right:0.4rem"></i>
+                Publicar vehículo
+            </h1>
+            <div class="header-actions">
+                <button class="btn-icon" id="theme-toggle"></button>
+                <span class="user-badge badge-user">{{ user.email }}</span>
+            </div>
+        </header>
+        <main class="main-content">
+            <div class="card" style="max-width:720px">
+                <div class="card-header">
+                    <h2>Datos del vehículo</h2>
+                    <p class="text-muted">Completa la información para publicar tu auto en venta.</p>
+                </div>
+
+                {% if error %}
+                <div class="alert alert-error" style="margin-bottom:1rem">
+                    <i data-lucide="alert-circle" style="width:18px;height:18px;vertical-align:middle;margin-right:0.4rem"></i>
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <form id="publicar-form">
+                    <div class="form-grid">
+                        <!-- Marca -->
+                        <div class="form-group">
+                            <label for="marca" class="form-label">Marca <span class="required">*</span></label>
+                            <input type="text" id="marca" name="marca" class="form-input" placeholder="Ej: Toyota, Ford, Chevrolet" required maxlength="100">
+                        </div>
+
+                        <!-- Modelo / Nombre -->
+                        <div class="form-group">
+                            <label for="nombre" class="form-label">Modelo <span class="required">*</span></label>
+                            <input type="text" id="nombre" name="nombre" class="form-input" placeholder="Ej: Corolla, Focus, Spark" required maxlength="120">
+                        </div>
+
+                        <!-- Año -->
+                        <div class="form-group">
+                            <label for="anio" class="form-label">Año <span class="required">*</span></label>
+                            <input type="number" id="anio" name="anio" class="form-input" placeholder="2023" min="1900" max="2100" required>
+                        </div>
+
+                        <!-- Precio -->
+                        <div class="form-group">
+                            <label for="precio_oferta" class="form-label">Precio de oferta ($) <span class="required">*</span></label>
+                            <input type="number" id="precio_oferta" name="precio_oferta" class="form-input" placeholder="25000.00" step="0.01" min="0.01" required>
+                        </div>
+
+                        <!-- Color -->
+                        <div class="form-group">
+                            <label for="color" class="form-label">Color</label>
+                            <input type="text" id="color" name="color" class="form-input" placeholder="Ej: Blanco, Negro, Rojo" maxlength="50">
+                        </div>
+
+                        <!-- Kilometraje -->
+                        <div class="form-group">
+                            <label for="kilometraje" class="form-label">Kilometraje</label>
+                            <input type="number" id="kilometraje" name="kilometraje" class="form-input" placeholder="35000" min="0">
+                        </div>
+
+                        <!-- Tipo de carrocería -->
+                        <div class="form-group">
+                            <label for="tipo" class="form-label">Tipo de carrocería <span class="required">*</span></label>
+                            <select id="tipo" name="tipo" class="form-input" required>
+                                <option value="sedan">Sedán</option>
+                                <option value="suv">SUV</option>
+                                <option value="hatchback">Hatchback</option>
+                                <option value="coupe">Coupé</option>
+                                <option value="convertible">Convertible</option>
+                                <option value="pickup">Pickup</option>
+                                <option value="wagon">Wagon</option>
+                                <option value="van">Van</option>
+                                <option value="deportivo">Deportivo</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                        </div>
+
+                        <!-- Transmisión -->
+                        <div class="form-group">
+                            <label for="transmision" class="form-label">Transmisión <span class="required">*</span></label>
+                            <select id="transmision" name="transmision" class="form-input" required>
+                                <option value="manual">Manual</option>
+                                <option value="automatica">Automática</option>
+                                <option value="cvt">CVT</option>
+                                <option value="automatica_estructada">Automática estructurada</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Descripción -->
+                    <div class="form-group" style="margin-top:1rem">
+                        <label for="descripcion" class="form-label">Descripción</label>
+                        <textarea id="descripcion" name="descripcion" class="form-input" rows="4" placeholder="Describe el estado del vehículo, accesorios, historial de mantenimiento, etc." maxlength="2000"></textarea>
+                    </div>
+
+                    <!-- Botones -->
+                    <div style="display:flex;gap:0.75rem;margin-top:1.5rem;justify-content:flex-end">
+                        <a href="/auto/" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary" id="btn-publicar">
+                            <i data-lucide="upload" style="width:16px;height:16px"></i>
+                            Publicar vehículo
+                        </button>
+                    </div>
+                </form>
+
+                <div id="publicar-loading" style="display:none;text-align:center;padding:2rem">
+                    <div class="spinner"></div>
+                    <p class="text-muted" style="margin-top:0.75rem">Publicando tu vehículo...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+<style>
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.form-label { font-weight: 600; font-size: 0.875rem; }
+.required { color: var(--color-danger); }
+.form-input {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.9375rem;
+    transition: border-color 0.15s;
+}
+.form-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.15);
+}
+textarea.form-input { resize: vertical; }
+select.form-input { cursor: pointer; }
+.alert-error {
+    padding: 0.75rem 1rem;
+    background: rgba(220,53,69,0.1);
+    border: 1px solid rgba(220,53,69,0.3);
+    border-radius: var(--radius-md);
+    color: var(--color-danger);
+    font-size: 0.875rem;
+}
+.spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+{% include '_sidebar_js.html' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('publicar-form');
+    const loading = document.getElementById('publicar-loading');
+    const btn = document.getElementById('btn-publicar');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        // Validar campos requeridos
+        const marca = document.getElementById('marca').value.trim();
+        const nombre = document.getElementById('nombre').value.trim();
+        const anio = document.getElementById('anio').value;
+        const precio = document.getElementById('precio_oferta').value;
+
+        if (!marca || !nombre || !anio || !precio) {
+            alert('Por favor completa los campos obligatorios.');
+            return;
+        }
+
+        // Mostrar loading
+        form.style.display = 'none';
+        loading.style.display = 'block';
+        btn.disabled = true;
+
+        const data = {
+            marca,
+            nombre,
+            anio: parseInt(anio),
+            precio_oferta: parseFloat(precio),
+            color: document.getElementById('color').value.trim() || null,
+            tipo: document.getElementById('tipo').value,
+            transmision: document.getElementById('transmision').value,
+            descripcion: document.getElementById('descripcion').value.trim() || null,
+            kilometraje: document.getElementById('kilometraje').value ? parseInt(document.getElementById('kilometraje').value) : null
+        };
+
+        try {
+            const resp = await fetch('/auto/api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (resp.ok) {
+                const anuncio = await resp.json();
+                window.location.href = '/auto/' + anuncio.slug;
+            } else {
+                const error = await resp.json().catch(() => ({}));
+                loading.style.display = 'none';
+                form.style.display = 'block';
+                alert(error.detail || error.message || 'Error al publicar el vehículo.');
+            }
+        } catch (err) {
+            loading.style.display = 'none';
+            form.style.display = 'block';
+            alert('Error de conexión. Intenta de nuevo.');
+        }
+    });
+});
+</script>
+{% endblock %}

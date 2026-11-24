@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% block title %}{{ anuncio.marca }} {{ anuncio.nombre }} {{ anuncio.anio }} — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+    {% with current_page='anuncio' %}
+    {% include '_sidebar.html' %}
+    {% endwith %}
+
+    <div class="main-wrapper">
+        <header class="top-header">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle"><i data-lucide="menu"></i></button>
+            <h1>{{ anuncio.marca }} {{ anuncio.nombre }}</h1>
+            <div class="header-actions">
+                <button class="btn-icon" id="theme-toggle" aria-label="Cambiar tema"></button>
+                {% if user %}
+                <span class="user-badge {% if user.is_admin %}badge-admin{% else %}badge-user{% endif %}">{{ user.email }}</span>
+                {% endif %}
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+                <!-- Galería de fotos -->
+                <div>
+                    <div class="card" style="margin-bottom:1rem">
+                        <div style="aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--color-primary),#1e3a8a);border-radius:var(--radius-md);margin-bottom:0.75rem">
+                            {% if fotos %}
+                            <img src="/fotos/{{ fotos[0].id }}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius-md)" alt="{{ anuncio.marca }} {{ anuncio.nombre }}">
+                            {% else %}
+                            <i data-lucide="car" style="width:64px;height:64px;opacity:0.3"></i>
+                            {% endif %}
+                        </div>
+                        {% if fotos|length > 1 %}
+                        <div style="display:flex;gap:0.5rem;overflow-x:auto;padding-bottom:0.5rem">
+                            {% for foto in fotos %}
+                            <img src="/fotos/{{ foto.id }}" style="width:80px;height:60px;object-fit:cover;border-radius:var(--radius-sm);cursor:pointer;border:2px solid {% if loop.index == 1 %}var(--color-primary){% else %}transparent{% endif %}" alt="Foto {{ loop.index }}">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Detalles -->
+                <div>
+                    <div class="card" style="margin-bottom:1rem">
+                        <h2 style="margin:0 0 0.5rem">{{ anuncio.marca }} {{ anuncio.nombre }} {{ anuncio.anio }}</h2>
+                        {% if anuncio.estado.value == 'vendido' %}
+                        <span class="badge badge-danger" style="font-size:1rem;margin-bottom:0.5rem;display:inline-block"><i data-lucide="x-circle" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"></i> VENDIDO</span>
+                        {% endif %}
+                        <p style="font-size:2rem;font-weight:700;color:var(--color-primary);margin:0.5rem 0">${{ anuncio.precio_oferta }}</p>
+                        <dl class="modelo-info" style="margin-top:1rem">
+                            <div><dt>Año</dt><dd>{{ anuncio.anio }}</dd></div>
+                            <div><dt>Color</dt><dd>{{ anuncio.color or 'No especificado' }}</dd></div>
+                            <div><dt>Tipo</dt><dd>{{ anuncio.tipo }}</dd></div>
+                            <div><dt>Transmisión</dt><dd>{{ anuncio.transmision }}</dd></div>
+                            {% if anuncio.kilometraje %}
+                            <div><dt>Kilometraje</dt><dd>{{ anuncio.kilometraje }} km</dd></div>
+                            {% endif %}
+                        </dl>
+                    </div>
+
+                    {% if anuncio.descripcion %}
+                    <div class="card" style="margin-bottom:1rem">
+                        <h3 style="margin:0 0 0.5rem">Descripción</h3>
+                        <p style="color:var(--color-text-muted);white-space:pre-line">{{ anuncio.descripcion }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Acciones -->
+                    {% if anuncio.estado.value == 'vendido' %}
+                    <div class="card">
+                        <h3 style="margin:0 0 0.5rem"><i data-lucide="check-circle-2" style="width:18px;height:18px;vertical-align:middle;margin-right:0.35rem"></i> Este auto fue vendido</h3>
+                        <p style="color:var(--color-text-muted);margin:0">La negociación entre comprador y vendedor se completó exitosamente.</p>
+                    </div>
+                    {% elif user and user.id != anuncio.vendedor_id %}
+                    <div class="card">
+                        <h3 style="margin:0 0 1rem">Interesar</h3>
+                        <div style="display:flex;flex-direction:column;gap:0.75rem">
+                            <button class="btn btn-primary btn-block" onclick="document.getElementById('mensaje-modal').classList.add('visible')"><i data-lucide="message-square" style="width:16px;height:16px"></i> Contactar al vendedor</button>
+                            <button class="btn btn-secondary btn-block" onclick="document.getElementById('oferta-modal').classList.add('visible')"><i data-lucide="hand-coins" style="width:16px;height:16px"></i> Hacer una oferta</button>
+                            <button class="btn btn-secondary btn-sm btn-block" onclick="document.getElementById('reporte-modal').classList.add('visible')"><i data-lucide="flag" style="width:16px;height:16px"></i> Reportar</button>
+                        </div>
+                    </div>
+                    {% elif user and user.id == anuncio.vendedor_id %}
+                    <div class="card">
+                        <span class="badge badge-admin">Este es tu anuncio</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+<!-- Modal de mensaje rápido -->
+<div class="modal-overlay" id="mensaje-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3><i data-lucide="message-square" style="width:18px;height:18px;vertical-align:middle;margin-right:0.35rem"></i> Contactar al vendedor</h3>
+            <button class="modal-close" onclick="document.getElementById('mensaje-modal').classList.remove('visible')">&times;</button>
+        </div>
+        <div class="modal-body">
+            {% if user %}
+            <form id="mensaje-form">
+                <div class="form-group">
+                    <label for="mensaje-contenido">Mensaje</label>
+                    <textarea id="mensaje-contenido" name="contenido" rows="4" required placeholder="Hola, me interesa tu {{ anuncio.marca }} {{ anuncio.nombre }}..."></textarea>
+                </div>
+                <div id="mensaje-error" class="alert alert-error" style="display:none"></div>
+                <div id="mensaje-success" class="alert alert-success" style="display:none"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('mensaje-modal').classList.remove('visible')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Enviar mensaje</button>
+                </div>
+            </form>
+            {% else %}
+            <p>Inicia sesión para contactar al vendedor.</p>
+            <a href="/login" class="btn btn-primary">Iniciar sesión</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de oferta -->
+<div class="modal-overlay" id="oferta-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Hacer una oferta</h3>
+            <button class="modal-close" onclick="document.getElementById('oferta-modal').classList.remove('visible')">&times;</button>
+        </div>
+        <div class="modal-body">
+            {% if user %}
+            <form id="oferta-form">
+                <div class="form-group">
+                    <label for="monto">Tu oferta ($)</label>
+                    <input type="number" id="monto" name="monto" min="1" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="mensaje">Mensaje (opcional)</label>
+                    <textarea id="mensaje" name="mensaje" rows="3" placeholder="Hola, me interesa tu auto..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('oferta-modal').classList.remove('visible')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Enviar oferta</button>
+                </div>
+            </form>
+            {% else %}
+            <p>Inicia sesión para hacer una oferta.</p>
+            <a href="/login" class="btn btn-primary">Iniciar sesión</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de reporte -->
+<div class="modal-overlay" id="reporte-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Reportar</h3>
+            <button class="modal-close" onclick="document.getElementById('reporte-modal').classList.remove('visible')">&times;</button>
+        </div>
+        <div class="modal-body">
+            {% if user %}
+            <form id="reporte-form">
+                <div class="form-group">
+                    <label for="motivo">Motivo</label>
+                    <select id="motivo" name="motivo" required>
+                        <option value="">Seleccionar...</option>
+                        <option value="contenido_inapropiado">Contenido inapropiado</option>
+                        <option value="fraude">Fraude</option>
+                        <option value="acoso">Acoso</option>
+                        <option value="anuncio_falso">Anuncio falso</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="detalles">Detalles</label>
+                    <textarea id="detalles" name="detalles" rows="3" placeholder="Describe el problema..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('reporte-modal').classList.remove('visible')">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Enviar reporte</button>
+                </div>
+            </form>
+            {% else %}
+            <p>Inicia sesión para enviar un reporte.</p>
+            <a href="/login" class="btn btn-primary">Iniciar sesión</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% include '_sidebar_js.html' %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mensaje rápido form
+    const mensajeForm = document.getElementById('mensaje-form');
+    if (mensajeForm) {
+        mensajeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorDiv = document.getElementById('mensaje-error');
+            const successDiv = document.getElementById('mensaje-success');
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            const contenido = document.getElementById('mensaje-contenido').value.trim();
+            if (!contenido) {
+                errorDiv.textContent = 'Escribe un mensaje antes de enviar.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const submitBtn = mensajeForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Enviando...';
+
+            try {
+                const params = new URLSearchParams({
+                    remitente_id: '{{ user.id }}',
+                    destinatario_id: '{{ anuncio.vendedor_id }}',
+                    contenido: contenido,
+                    anuncio_id: '{{ anuncio.id }}'
+                });
+                const resp = await fetch(`/chat/api/mensaje?${params}`, { method: 'POST' });
+                if (resp.ok) {
+                    successDiv.textContent = 'Mensaje enviado. El vendedor te responderá pronto.';
+                    const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+                    successDiv.innerHTML = checkIcon + ' Mensaje enviado. El vendedor te responderá pronto.';
+                    successDiv.style.display = 'block';
+                    document.getElementById('mensaje-contenido').value = '';
+                    setTimeout(() => {
+                        document.getElementById('mensaje-modal').classList.remove('visible');
+                    }, 1500);
+                } else {
+                    const err = await resp.json();
+                    errorDiv.textContent = err.detail || 'Error al enviar el mensaje.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Error de conexión.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Enviar mensaje';
+            }
+        });
+    }
+
+    // Oferta form
+    const ofertaForm = document.getElementById('oferta-form');
+    if (ofertaForm) {
+        ofertaForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = { anuncio_id: {{ anuncio.id }}, monto: document.getElementById('monto').value, mensaje: document.getElementById('mensaje').value };
+            const resp = await fetch('/ofertas/api', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+            if (resp.ok) { alert('Oferta enviada'); document.getElementById('oferta-modal').classList.remove('visible'); }
+            else { const err = await resp.json(); alert(err.detail || 'Error'); }
+        });
+    }
+
+    // Reporte form
+    const reporteForm = document.getElementById('reporte-form');
+    if (reporteForm) {
+        reporteForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = { usuario_reportado_id: {{ anuncio.vendedor_id }}, anuncio_id: {{ anuncio.id }}, motivo: document.getElementById('motivo').value, detalles: document.getElementById('detalles').value };
+            const resp = await fetch('/reportes/api', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+            if (resp.ok) { alert('Reporte enviado'); document.getElementById('reporte-modal').classList.remove('visible'); }
+            else { const err = await resp.json(); alert(err.detail || 'Error'); }
+        });
+    }
+});
+</script>
+{% endblock %}
